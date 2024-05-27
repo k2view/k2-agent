@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.k2view.agent.Utils.dynamicString;
 import static com.k2view.agent.Utils.logMessage;
@@ -38,11 +37,6 @@ import static java.net.http.HttpResponse.BodyHandlers.ofString;
 public class AgentDispatcherHttp implements AgentDispatcher {
 
     /**
-     * A blocking queue that stores incoming requests.
-     */
-    private final BlockingQueue<Request> incoming;
-
-    /**
      * A blocking queue that stores outgoing responses.
      */
     private final BlockingQueue<Response> outgoing;
@@ -53,16 +47,10 @@ public class AgentDispatcherHttp implements AgentDispatcher {
     private final ExecutorService requestExecutor;
 
     /**
-     * An atomic boolean that determines if the `AgentSender` is running.
-     */
-    private final AtomicBoolean running;
-
-    /**
      * An `HttpClient` used to send HTTP requests.
      */
     private final HttpClient httpClient;
 
-    private final Thread worker;
 
     /**
      * Creates a new `AgentSender` instance with a specified maximum queue size.
@@ -70,13 +58,9 @@ public class AgentDispatcherHttp implements AgentDispatcher {
      * @param maxQueueSize the maximum size of the incoming and outgoing queues.
      */
     public AgentDispatcherHttp(int maxQueueSize) {
-        incoming = new LinkedBlockingQueue<>(maxQueueSize);
         outgoing = new LinkedBlockingQueue<>(maxQueueSize);
         requestExecutor = Executors.newCachedThreadPool(r -> new Thread(r, "AgentSender-RequestExecutor"));
-        running = new AtomicBoolean(true);
         httpClient = initHttpClient();
-        worker = new Thread(this::run, "AgentSender-Worker");
-        worker.start();
     }
 
     private HttpClient initHttpClient() {
@@ -96,7 +80,18 @@ public class AgentDispatcherHttp implements AgentDispatcher {
      * @param request the HTTP request to send to the server.
      */
     public void send(Request request) {
-        incoming.add(request);
+        try {
+            logMessage("INFO", String.format("Sending mail[taskId:%s, url:%s, method:%s]",
+                    request.taskId(), request.url(), request.method()));
+            httpClient.sendAsync(getHttpRequest(request), ofString())
+                    .thenAccept(r -> sendResponse(request, r))
+                    .exceptionally(e -> {
+                        handleFailedRequest(request, e);
+                        return null;
+                    });
+        } catch (Exception e) {
+            handleFailedRequest(request, e);
+        }
     }
 
     /**
@@ -118,38 +113,6 @@ public class AgentDispatcherHttp implements AgentDispatcher {
         responses.add(response);
         outgoing.drainTo(responses);
         return responses;
-    }
-
-    private void run(){
-        while (running.get()) {
-            try {
-                var request = incoming.take();
-                sendMail(request);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    /**
-     * Sends an HTTP request to the given URL with the given method and header, and returns the response as a Response object.
-     *
-     * @param request the request to send
-     * @throws RuntimeException if there was an error sending the HTTP request
-     */
-    private void sendMail(Request request) {
-        try {
-            logMessage("INFO", String.format("Sending mail[taskId:%s, url:%s, method:%s]",
-                    request.taskId(), request.url(), request.method()));
-            httpClient.sendAsync(getHttpRequest(request), ofString())
-                    .thenAccept(r -> sendResponse(request, r))
-                    .exceptionally(e -> {
-                        handleFailedRequest(request, e);
-                        return null;
-                    });
-        } catch (Exception e) {
-            handleFailedRequest(request, e);
-        }
     }
 
     private void handleFailedRequest(Request request, Throwable throwable) {
@@ -182,6 +145,7 @@ public class AgentDispatcherHttp implements AgentDispatcher {
         return builder.build();
     }
 
+
     /**
      * Adds a Response object to the outgoing queue.
      *
@@ -192,7 +156,7 @@ public class AgentDispatcherHttp implements AgentDispatcher {
         var statusCode = response.statusCode();
         var id = request.taskId();
         logMessage("INFO", String.format("Received response for taskId: %s, status: %s", id, statusCode));
-        outgoing.add(new Response(request, response.statusCode(), response.body()));
+        outgoing.add(new Response(request, statusCode, response.body()));
     }
 
     /**
@@ -211,9 +175,7 @@ public class AgentDispatcherHttp implements AgentDispatcher {
      */
     @Override
     public void close() {
-        running.set(false);
         requestExecutor.shutdown();
-        worker.interrupt();
     }
 
     private static SSLContext noCertificateCheckSSLContext() throws NoSuchAlgorithmException, KeyManagementException {

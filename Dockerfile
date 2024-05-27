@@ -1,5 +1,5 @@
 # Use Ubuntu as the base image
-FROM vegardit/graalvm-maven:22.3.1-java17 as build
+FROM vegardit/graalvm-maven:latest-java21 as build
 
 # Set the working directory
 WORKDIR /app

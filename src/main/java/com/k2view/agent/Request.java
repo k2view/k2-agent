@@ -16,9 +16,9 @@ import static com.k2view.agent.Utils.dynamicString;
 /**
  * Represents an HTTP request that is sent to the server.
  */
-public record Request(String taskId, String url, String method, Map<String, Object> header, String body, int[] tryCount) {
+public record Request(String taskId, String url, String method, Map<String, Object> header, String body, int[] tryCount, long startTime) {
     Request(String taskId, String url, String method, Map<String, Object> header, String body) {
-        this(taskId, url, method, header, body, new int[]{0});
+        this(taskId, url, method, header, body, new int[]{0}, System.currentTimeMillis());
     }
 
     public int getTryCount() {
@@ -31,14 +31,8 @@ public record Request(String taskId, String url, String method, Map<String, Obje
 
     @Override
     public String toString() {
-        return """
-                Request{
-                    taskId='%s',
-                    url='%s',
-                    method='%s',
-                    tryCount='%s'
-                }
-                """.formatted(taskId, url, method, tryCount[0]);
+        return "Request{ taskId='%s', url='%s', method='%s', header='%s', body='%s', tryCount='%s', startTime='%s' }"
+                .formatted(taskId, url, method, header, body, tryCount[0], startTime);
     }
 
     public static class Adapter extends TypeAdapter<Request> {
@@ -48,8 +42,22 @@ public record Request(String taskId, String url, String method, Map<String, Obje
             jsonWriter.name("taskId").value(request.taskId());
             jsonWriter.name("url").value(request.url());
             jsonWriter.name("method").value(request.method());
-            jsonWriter.name("header").value(request.header().toString());
             jsonWriter.name("body").value(request.body());
+            jsonWriter.name("header");
+            jsonWriter.beginObject();
+            for (Map.Entry<String, Object> entry : request.header().entrySet()) {
+                jsonWriter.name(entry.getKey());
+                if (entry.getValue() instanceof List<?> list) {
+                    jsonWriter.beginArray();
+                    for (Object o : list) {
+                        jsonWriter.value(o.toString());
+                    }
+                    jsonWriter.endArray();
+                } else {
+                    jsonWriter.value(entry.getValue().toString());
+                }
+            }
+            jsonWriter.endObject();
             jsonWriter.endObject();
         }
 
@@ -76,7 +84,7 @@ public record Request(String taskId, String url, String method, Map<String, Obje
                                 List<String> l = new ArrayList<>();
                                 jsonReader.beginArray();
                                 while (jsonReader.hasNext()) {
-                                    l.add(jsonReader.nextString());
+                                    l.add(dynamicString(jsonReader.nextString()));
                                 }
                                 jsonReader.endArray();
                                 header.put(key, l);

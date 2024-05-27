@@ -6,8 +6,7 @@ import com.k2view.agent.postman.CloudManager;
 import com.k2view.agent.postman.Postman;
 
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,20 +36,18 @@ public class K2ViewAgent {
      */
     private final Postman postman;
 
-    private final Executor executor;
+
+    private final Set<String> inProgress = ConcurrentHashMap.newKeySet();
 
     /**
      * An atomic boolean that determines if the `K2ViewAgent` is running.
      */
     private final AtomicBoolean running = new AtomicBoolean(true);
 
-    private final CountDownLatch latch = new CountDownLatch(1);
-
-    public K2ViewAgent(Postman postman, int pollingInterval, AgentDispatcher agentSender, Executor executor) {
+    public K2ViewAgent(Postman postman, int pollingInterval, AgentDispatcher agentSender) {
         this.postman = postman;
         this.dispatcher = agentSender;
         this.pollingInterval = pollingInterval;
-        this.executor = executor;
     }
 
 
@@ -58,73 +55,106 @@ public class K2ViewAgent {
      * Starts the agent by initializing the `agentSender`, `id`, and `since` fields,
      * and calling the `start()` method.
      */
-    public static void main(String[] args) throws InterruptedException {
-        AgentDispatcherHttp sender = new AgentDispatcherHttp(10_000);
+    public static void main(String[] args) {
         Postman postman = new CloudManager(env("K2_MAILBOX_ID"), env("K2_MANAGER_URL"));
         int interval = parseInt(def(env("K2_POLLING_INTERVAL"), "10"));
-        Executor executor = (Runnable r) -> new Thread(r, "MANAGER").start();
-        new K2ViewAgent(postman, interval, sender, executor).run();
+        AgentDispatcherHttp sender = new AgentDispatcherHttp(10_000);
+        var agent = new K2ViewAgent(postman, interval, sender);
+        Runtime.getRuntime().addShutdownHook(new Thread(agent::stop));
+        agent.run();
     }
 
     /**
      * Starts the manager thread that continuously checks for new inbox messages
      * and sends them to the `agentSender` for processing.
      */
-    public void run() throws InterruptedException {
-        executor.execute(() -> {
-            try {
-                List<Response> responseList = new ArrayList<>();
-                long interval = pollingInterval;
-                String lastTaskId = "";
-                while (running.get()) {
-                    Requests inboxMessages = postman.getInboxMessages(responseList, lastTaskId);
-                    if (inboxMessages != null) {
-                        interval = inboxMessages.pollInterval() > 0 ? inboxMessages.pollInterval() : pollingInterval;
-                        for (Request req : inboxMessages.requests()) {
-                            lastTaskId = req.taskId();
-                            Utils.logMessage("INFO", "Added URL to the Queue:" + req);
-                            dispatcher.send(req);
-                        }
-                    }
-                    var list = dispatcher.receive(interval, TimeUnit.SECONDS);
-                    responseList = filterResponses(list);
+    public void run() {
+        try {
+            List<Response> responseList = new ArrayList<>();
+            List<Request> retryList = new ArrayList<>();
+            long interval;
+            while (running.get()) {
+                Requests inboxMessages = postman.getInboxMessages(responseList);
+                cleanInProcess(responseList);
+                interval = inboxMessages.pollInterval() > 0 ? inboxMessages.pollInterval() : pollingInterval;
+                for (Request req : mergeWithRetryList(retryList, inboxMessages.requests())) {
+                    Utils.logMessage("INFO", "Added URL to the Queue:" + req);
+                    dispatcher.send(req);
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } finally {
-                latch.countDown();
+                var list = dispatcher.receive(interval, TimeUnit.SECONDS);
+                var filteredResponse = filterResponses(list);
+                responseList = filteredResponse.returnToSender;
+                retryList = filteredResponse.retry;
             }
-        });
-        latch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private List<Response> filterResponses(List<Response> responses) {
-        List<Response> filteredResponses = new ArrayList<>();
+    /**
+     * Removes the task ids of the responses from the `inProgress` set.
+     * @param responseList the list of responses to clean.
+     */
+    private void cleanInProcess(List<Response> responseList) {
+        for(var res : responseList){
+            inProgress.remove(res.taskId());
+        }
+    }
+
+    /**
+     * Merges the `retryList` with the `requests` list.
+     * @param retryList the list of requests to retry.
+     * @param requests the list of requests to merge with the `retryList`.
+     * @return a merged list of requests.
+     */
+    private List<Request> mergeWithRetryList(List<Request> retryList, List<Request> requests) {
+        List<Request> merged = new ArrayList<>(retryList);
+        for(Request req : requests){
+            if(inProgress.contains(req.taskId())){
+                continue;
+            }
+            inProgress.add(req.taskId());
+            merged.add(req);
+        }
+        return merged;
+    }
+
+    record FilteredResponse(List<Response> returnToSender, List<Request> retry) { }
+
+    /**
+     * Filters the responses list into two lists:
+     * 1. A list of responses to return to the sender.
+     * 2. A list of requests to retry.
+     * @param responses the list of responses to filter.
+     * @return a `FilteredResponse` object containing the two lists.
+     */
+    private FilteredResponse filterResponses(List<Response> responses) {
+        List<Response> returnToSender = new ArrayList<>();
+        List<Request> retry = new ArrayList<>();
         for (Response res : responses) {
             logMessage("INFO", "Received response: " + res);
             if(needToRetry(res)){
-                retry(res.request());
+                Request request = res.request();
+                Utils.logMessage("INFO", "Retrying request: " + request);
+                request.incrementTryCount();
+                retry.add(request);
             } else {
-                filteredResponses.add(res);
+                Utils.logMessage("INFO", "return to sender: " + res);
+                returnToSender.add(res);
             }
         }
-        return filteredResponses;
+        return new FilteredResponse(returnToSender, retry);
     }
 
     private boolean needToRetry(Response res) {
-        return res.code() >= 400 && res.request().getTryCount() < MAX_RETRY-1;
-    }
-
-    private void retry(Request request) {
-        Utils.logMessage("INFO", "Retrying request: " + request);
-        request.incrementTryCount();
-        dispatcher.send(request);
+        return res.code() >= 500 && res.request().getTryCount() < MAX_RETRY-1;
     }
 
     /**
      * Stops the agent by setting the `running` flag to `false`.
      */
     public void stop() {
+        Utils.logMessage("INFO", "Stopping agent");
         running.set(false);
     }
 }

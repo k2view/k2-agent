@@ -8,9 +8,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 
@@ -35,13 +33,9 @@ public class CloudManager implements Postman {
     }
 
     @Override
-    public Requests getInboxMessages(List<Response> responses, String lastTaskId) {
+    public Requests getInboxMessages(List<Response> responses) {
         Utils.logMessage("INFO", "FETCHING MESSAGES FROM: " + uri.toString() + ", ID:" + mailboxId);
-        Map<String, Object> r = new HashMap<>();
-        r.put("responses", responses);
-        r.put("id", mailboxId);
-        r.put("since", lastTaskId);
-        String body = Utils.gson.toJson(r);
+        String body = Utils.gson.toJson(new PostmanRequestBody(responses, mailboxId));
         HttpRequest request = HttpRequest.newBuilder()
                 .POST(ofString(body))
                 .uri(uri)
@@ -52,8 +46,8 @@ public class CloudManager implements Postman {
             String jsonArrayString = response.body();
             return Utils.gson.fromJson(jsonArrayString, Requests.class);
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + e.getMessage());
+            return new Requests(List.of(), 0);
         }
     }
 }
