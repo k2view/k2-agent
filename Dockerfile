@@ -12,7 +12,7 @@ RUN mvn package -Pnative -DskipTests
 FROM alpine:latest
 
 ENV GLIBC_REPO=https://github.com/sgerrand/alpine-pkg-glibc
-ENV GLIBC_VERSION=2.30-r0
+ENV GLIBC_VERSION=2.35-r1
 
 RUN set -ex && \
     apk --update add libstdc++ curl ca-certificates && \

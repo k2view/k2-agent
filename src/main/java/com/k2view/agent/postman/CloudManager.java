@@ -27,6 +27,12 @@ public class CloudManager implements Postman {
     private final HttpClient client;
 
     public CloudManager(String mailboxId, String mailboxUrl) {
+        if(mailboxId == null || mailboxId.isEmpty()) {
+            throw new IllegalArgumentException("Mailbox ID cannot be null or empty");
+        }
+        if(mailboxUrl == null || mailboxUrl.isEmpty()) {
+            throw new IllegalArgumentException("Mailbox URL cannot be null or empty");
+        }
         this.mailboxId = mailboxId;
         this.uri = URI.create(mailboxUrl);
         this.client = HttpClient.newBuilder().build();
