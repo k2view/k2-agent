@@ -7,10 +7,16 @@ import java.util.List;
 public interface Postman {
 
     /**
-     * Retrieves a list of inbox messages from the REST API.
+     * Retrieves a list of inbox messages from the REST API.X
      *
      * @param responses a list of previous responses received from the server
      * @return a list of `AgentSender.Request` objects
      */
-    Requests getInboxMessages(List<Response> responses, String lastTaskId);
+    Requests getInboxMessages(List<Response> responses);
+
+    record PostmanRequestBody(List<Response> responses, String id, String since) {
+        PostmanRequestBody(List<Response> responses, String id){
+            this(responses, id, "0");
+        }
+    }
 }
