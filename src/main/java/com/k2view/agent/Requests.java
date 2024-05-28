@@ -14,6 +14,8 @@ import java.util.List;
 
 public record Requests(List<Request> requests, long pollInterval) {
 
+    public static final Requests EMPTY = new Requests(List.of(), 0);
+
     public boolean isEmpty() {
         return requests.isEmpty();
     }
@@ -22,8 +24,12 @@ public record Requests(List<Request> requests, long pollInterval) {
         @Override
         public void write(JsonWriter jsonWriter, Requests requests) throws IOException {
             jsonWriter.beginObject();
-            jsonWriter.name("requests").value(requests.requests().toString());
-            jsonWriter.name("pollInterval").value(requests.pollInterval());
+            jsonWriter.name("requests");
+            jsonWriter.beginArray();
+            for (Request request : requests.requests) {
+                Utils.gson.toJson(request, Request.class, jsonWriter);
+            }
+            jsonWriter.endArray();
             jsonWriter.endObject();
         }
 
