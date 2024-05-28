@@ -1,4 +1,4 @@
-package com.k2view.agent.HttpSender;
+package com.k2view.agent.httpsender;
 
 import java.io.IOException;
 import java.net.URI;
@@ -204,12 +204,14 @@ public class OAuthHttpSender extends HttpSender {
             final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
             final String postStr = HttpUtil.buildPostString(GRANT_TYPE_CONST, "refresh_token", "refresh_token", refreshToken, "scope", oBuilder.scope);
             requestBuilder.POST(ofString(postStr));
-            final HttpClient client = HttpClient.newHttpClient();
-            final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-            if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
-                throw new IllegalStateException("Invalid refresh token");
+            try(HttpClient client = HttpClient.newHttpClient()) {
+                final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+                if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
+                    throw new IllegalStateException("Invalid refresh token");
+                }
+
+                parseResponse(response.body());
             }
-            parseResponse(response.body());
 
         }
 
@@ -218,9 +220,10 @@ public class OAuthHttpSender extends HttpSender {
             String postStr = oBuilder.buildPostData();
             requestBuilder.POST(ofString(postStr));
             try {
-                final HttpClient client = HttpClient.newHttpClient();
-                final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-                parseResponse(response.body());
+                try(final HttpClient client = HttpClient.newHttpClient()) {
+                    final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+                    parseResponse(response.body());
+                }
             } catch (Exception ex) {
                 invalidateToken();
                 throw ex;

@@ -1,9 +1,7 @@
-package com.k2view.agent.HttpSender;
+package com.k2view.agent.httpsender;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.k2view.agent.Request;
-import com.k2view.agent.Requests;
 
 import java.net.URI;
 import java.net.URLEncoder;

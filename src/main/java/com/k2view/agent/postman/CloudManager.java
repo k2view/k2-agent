@@ -1,7 +1,6 @@
 package com.k2view.agent.postman;
 
-import com.k2view.agent.HttpSender.HttpSender;
-import com.k2view.agent.HttpSender.OAuthHttpSender;
+import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.Requests;
 import com.k2view.agent.Response;
 import com.k2view.agent.Utils;

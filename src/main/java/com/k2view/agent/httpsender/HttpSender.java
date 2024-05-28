@@ -1,4 +1,4 @@
-package com.k2view.agent.HttpSender;
+package com.k2view.agent.httpsender;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -35,10 +35,8 @@ public class HttpSender implements AutoCloseable {
 
     @Override
     public void close() {
-        /* Does not compile
         if (senderClient != null) {
             senderClient.close();
         }
-         */
     }
 }
