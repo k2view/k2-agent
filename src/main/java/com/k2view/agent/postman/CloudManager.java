@@ -1,12 +1,12 @@
 package com.k2view.agent.postman;
 
+import com.k2view.agent.HttpSender.HttpSender;
+import com.k2view.agent.HttpSender.OAuthHttpSender;
 import com.k2view.agent.Requests;
 import com.k2view.agent.Response;
 import com.k2view.agent.Utils;
 
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.List;
@@ -26,12 +26,27 @@ public class CloudManager implements Postman {
     /**
      * An instance of the Java HTTP client for sending HTTP requests.
      */
-    private final HttpClient client;
+    private final HttpSender client;
 
     public CloudManager(String mailboxId, String mailboxUrl) {
         this.mailboxId = mailboxId;
         this.uri = URI.create(mailboxUrl);
-        this.client = HttpClient.newBuilder().build();
+
+        /* Grant type "password"   (deprecated. Not recommended)  */
+        /*
+        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder = OAuthHttpSender.newOAuthRequestBuilder("{OAUTH server URL}");
+        oAuthBuilder.username("admin").password("admin");
+        this.client = oAuthBuilder.buildSender();
+         */
+
+        /* Grant type "client_credentials"  */
+        /*
+        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder = OAuthHttpSender.newOAuthRequestBuilder("{OAUTH server URL}");
+        oAuthBuilder.clientId("The client ID").clientSecret("The client secret");
+        this.client = oAuthBuilder.buildSender();
+         */
+
+        this.client = new HttpSender();
     }
 
     @Override
@@ -42,14 +57,10 @@ public class CloudManager implements Postman {
         r.put("id", mailboxId);
         r.put("since", lastTaskId);
         String body = Utils.gson.toJson(r);
-        HttpRequest request = HttpRequest.newBuilder()
-                .POST(ofString(body))
-                .uri(uri)
-                .header("Content-Type", "application/json")
-                .build();
+
         try {
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            String jsonArrayString = response.body();
+            final HttpResponse<String> response = client.postString(uri, body, null);
+            String jsonArrayString = response.body(); // Check response status code ?
             return Utils.gson.fromJson(jsonArrayString, Requests.class);
         } catch (Exception e) {
             e.printStackTrace();
