@@ -32,9 +32,13 @@ public class OAuthHttpSender extends HttpSender {
 
     @Override
     public synchronized HttpResponse<String> postString(URI uri, String body, Map<String, String> headers, int timeout) {
+        Map<String,String> h = new HashMap<>();
+        if(headers != null){
+            headers.putAll(h);
+        }
         final HttpRequest.BodyPublisher b = ofString(body);
         String token = tokenMgr.getToken();
-        Map<String, String> postHeaders = addAuth(headers, token);
+        Map<String, String> postHeaders = addAuth(h, token);
         final HttpRequest request = HttpUtil.buildRequest(uri, postHeaders, timeout)
                 .POST(b)
                 .build();
@@ -44,7 +48,7 @@ public class OAuthHttpSender extends HttpSender {
         if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
             tokenMgr.invalidateToken();
             token = tokenMgr.getToken();
-            postHeaders = addAuth(headers, token);
+            postHeaders = addAuth(h, token);
             final HttpRequest newRequest = HttpUtil.buildRequest(uri, postHeaders, timeout)
                     .POST(b)
                     .build();
