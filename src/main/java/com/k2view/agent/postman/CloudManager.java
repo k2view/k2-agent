@@ -4,8 +4,10 @@ import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.Requests;
 import com.k2view.agent.Response;
 import com.k2view.agent.Utils;
+import com.k2view.agent.httpsender.OAuthHttpSender;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 
@@ -65,5 +67,19 @@ public class CloudManager implements Postman {
             Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + e.getMessage());
             return new Requests(List.of(), 0);
         }
+    }
+
+    /**
+     * Test with QA server
+     * @param args
+     * @throws URISyntaxException
+     */
+
+    public static void main(String[] args) throws URISyntaxException {
+        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder =
+                OAuthHttpSender.newOAuthRequestBuilder("http://10.21.2.82:8081/sso-auth-server/oauth/token");
+        oAuthBuilder.clientId("bael-client").clientSecret("bael-secret").scope("1");
+        HttpSender client = oAuthBuilder.buildSender();
+        client.postString(new URI("http://google.com"),"hi",null);
     }
 }

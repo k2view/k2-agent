@@ -14,6 +14,8 @@ import static java.util.Objects.requireNonNull;
 
 public class OAuthHttpSender extends HttpSender {
 
+    public enum ClientAuthentication {BasicAuthHeader, ClientCredentialsInBody}
+
     private static final Set<Integer> NEED_TO_RENEW_TOKEN_ERROR_CODES = Set.of(401);
     static final String GRANT_TYPE_CONST = "grant_type";
 
@@ -76,7 +78,7 @@ public class OAuthHttpSender extends HttpSender {
         private String scope;
         private String clientId;
         private String clientSecret;
-        private boolean authInHeader = false;
+        private ClientAuthentication clientAuthentication = ClientAuthentication.BasicAuthHeader;
         private int timeout = 60;
         private int tokenExpiration = -1;
 
@@ -97,19 +99,19 @@ public class OAuthHttpSender extends HttpSender {
         }
 
         public OAuthRequestBuilder password(String password) {
-            requireNonNull(username, "password must be non-null");
+            requireNonNull(password, "password must be non-null");
             this.password = password;
             return this;
         }
 
         public OAuthRequestBuilder clientId(String clientId) {
-            requireNonNull(username, "clientId must be non-null");
+            requireNonNull(clientId, "clientId must be non-null");
             this.clientId = clientId;
             return this;
         }
 
         public OAuthRequestBuilder clientSecret(String clientSecret) {
-            requireNonNull(username, "clientSecret must be non-null");
+            requireNonNull(clientSecret, "clientSecret must be non-null");
             this.clientSecret = clientSecret;
             return this;
         }
@@ -129,8 +131,8 @@ public class OAuthHttpSender extends HttpSender {
             return this;
         }
 
-        public OAuthRequestBuilder authInHeader(boolean inHeader) {
-            this.authInHeader = inHeader;
+        public OAuthRequestBuilder clientAuthentication(ClientAuthentication clientAuthentication) {
+            this.clientAuthentication = clientAuthentication;
             return this;
         }
 
@@ -153,7 +155,7 @@ public class OAuthHttpSender extends HttpSender {
                 // grant_type=client_credentials
                 postStr = HttpUtil.buildPostString(GRANT_TYPE_CONST, "client_credentials", "scope", scope);
             }
-            if (!authInHeader) {
+            if (clientAuthentication == ClientAuthentication.ClientCredentialsInBody) {
                 postStr += "&" + HttpUtil.buildPostString("client_id", clientId, "client_secret", clientSecret);
             }
             return postStr;
@@ -204,7 +206,7 @@ public class OAuthHttpSender extends HttpSender {
             final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
             final String postStr = HttpUtil.buildPostString(GRANT_TYPE_CONST, "refresh_token", "refresh_token", refreshToken, "scope", oBuilder.scope);
             requestBuilder.POST(ofString(postStr));
-            try(HttpClient client = HttpClient.newHttpClient()) {
+            try (HttpClient client = HttpClient.newHttpClient()) {
                 final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
                 if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
                     throw new IllegalStateException("Invalid refresh token");
@@ -220,8 +222,11 @@ public class OAuthHttpSender extends HttpSender {
             String postStr = oBuilder.buildPostData();
             requestBuilder.POST(ofString(postStr));
             try {
-                try(final HttpClient client = HttpClient.newHttpClient()) {
+                try (final HttpClient client = HttpClient.newHttpClient()) {
                     final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+                    if (response.statusCode() < 200 || response.statusCode() >= 400) {
+                        throw new IllegalStateException("Failed to get new token: " + response.body());
+                    }
                     parseResponse(response.body());
                 }
             } catch (Exception ex) {
@@ -285,10 +290,10 @@ public class OAuthHttpSender extends HttpSender {
         }
 
         private Map<String, String> authHeaders() {
-            Map<String, String> h = Map.copyOf(oBuilder.extraHeaders);
+            Map<String, String> h = new HashMap<>(oBuilder.extraHeaders);
             h.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
             h.put("Accept", "application/json");
-            if (oBuilder.authInHeader) {
+            if (oBuilder.clientAuthentication == ClientAuthentication.BasicAuthHeader) {
                 if (!HttpUtil.isEmpty(oBuilder.username)) {
                     h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.username + ":" + oBuilder.password));
                 } else if (!HttpUtil.isEmpty(oBuilder.clientId) && !HttpUtil.isEmpty(oBuilder.clientSecret)) {
