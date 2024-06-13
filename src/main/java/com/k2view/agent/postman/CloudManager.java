@@ -1,12 +1,13 @@
 package com.k2view.agent.postman;
 
+import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.Requests;
 import com.k2view.agent.Response;
 import com.k2view.agent.Utils;
+import com.k2view.agent.httpsender.OAuthHttpSender;
 
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
+import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class CloudManager implements Postman {
     /**
      * An instance of the Java HTTP client for sending HTTP requests.
      */
-    private final HttpClient client;
+    private final HttpSender client;
 
     public CloudManager(String mailboxId, String mailboxUrl) {
         if(mailboxId == null || mailboxId.isEmpty()) {
@@ -35,25 +36,50 @@ public class CloudManager implements Postman {
         }
         this.mailboxId = mailboxId;
         this.uri = URI.create(mailboxUrl);
-        this.client = HttpClient.newBuilder().build();
+
+        /* Grant type "password"   (deprecated. Not recommended)  */
+        /*
+        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder = OAuthHttpSender.newOAuthRequestBuilder("{OAUTH server URL}");
+        oAuthBuilder.username("admin").password("admin");
+        this.client = oAuthBuilder.buildSender();
+         */
+
+        /* Grant type "client_credentials"  */
+        /*
+        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder = OAuthHttpSender.newOAuthRequestBuilder("{OAUTH server URL}");
+        oAuthBuilder.clientId("The client ID").clientSecret("The client secret");
+        this.client = oAuthBuilder.buildSender();
+         */
+
+        this.client = new HttpSender();
     }
 
     @Override
     public Requests getInboxMessages(List<Response> responses) {
         Utils.logMessage("INFO", "FETCHING MESSAGES FROM: " + uri.toString() + ", ID:" + mailboxId);
         String body = Utils.gson.toJson(new PostmanRequestBody(responses, mailboxId));
-        HttpRequest request = HttpRequest.newBuilder()
-                .POST(ofString(body))
-                .uri(uri)
-                .header("Content-Type", "application/json")
-                .build();
+
         try {
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            String jsonArrayString = response.body();
+            final HttpResponse<String> response = client.postString(uri, body, null);
+            String jsonArrayString = response.body(); // Check response status code ?
             return Utils.gson.fromJson(jsonArrayString, Requests.class);
         } catch (Exception e) {
             Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + e.getMessage());
             return new Requests(List.of(), 0);
         }
+    }
+
+    /**
+     * Test with QA server
+     * @param args
+     * @throws URISyntaxException
+     */
+
+    public static void main(String[] args) throws URISyntaxException {
+        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder =
+                OAuthHttpSender.newOAuthRequestBuilder("http://10.21.2.82:8081/sso-auth-server/oauth/token");
+        oAuthBuilder.clientId("bael-client").clientSecret("bael-secret").scope("1");
+        HttpSender client = oAuthBuilder.buildSender();
+        client.postString(new URI("http://google.com"),"hi",null);
     }
 }
