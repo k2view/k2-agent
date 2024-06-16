@@ -4,14 +4,11 @@ import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.Requests;
 import com.k2view.agent.Response;
 import com.k2view.agent.Utils;
-import com.k2view.agent.httpsender.OAuthHttpSender;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 
-import static java.net.http.HttpRequest.BodyPublishers.ofString;
 
 public class CloudManager implements Postman {
 
@@ -27,7 +24,7 @@ public class CloudManager implements Postman {
      */
     private final HttpSender client;
 
-    public CloudManager(String mailboxId, String mailboxUrl) {
+    public CloudManager(String mailboxId, String mailboxUrl, HttpSender client) {
         if(mailboxId == null || mailboxId.isEmpty()) {
             throw new IllegalArgumentException("Mailbox ID cannot be null or empty");
         }
@@ -36,22 +33,11 @@ public class CloudManager implements Postman {
         }
         this.mailboxId = mailboxId;
         this.uri = URI.create(mailboxUrl);
+        this.client = client;
+    }
 
-        /* Grant type "password"   (deprecated. Not recommended)  */
-        /*
-        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder = OAuthHttpSender.newOAuthRequestBuilder("{OAUTH server URL}");
-        oAuthBuilder.username("admin").password("admin");
-        this.client = oAuthBuilder.buildSender();
-         */
-
-        /* Grant type "client_credentials"  */
-        /*
-        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder = OAuthHttpSender.newOAuthRequestBuilder("{OAUTH server URL}");
-        oAuthBuilder.clientId("The client ID").clientSecret("The client secret");
-        this.client = oAuthBuilder.buildSender();
-         */
-
-        this.client = new HttpSender();
+    public CloudManager(String mailboxId, String mailboxUrl) {
+        this(mailboxId, mailboxUrl, HttpSender.get());
     }
 
     @Override
@@ -60,26 +46,12 @@ public class CloudManager implements Postman {
         String body = Utils.gson.toJson(new PostmanRequestBody(responses, mailboxId));
 
         try {
-            final HttpResponse<String> response = client.postString(uri, body, null);
+            final HttpResponse<String> response = client.send(uri, body, null);
             String jsonArrayString = response.body(); // Check response status code ?
             return Utils.gson.fromJson(jsonArrayString, Requests.class);
         } catch (Exception e) {
             Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + e.getMessage());
             return new Requests(List.of(), 0);
         }
-    }
-
-    /**
-     * Test with QA server
-     * @param args
-     * @throws URISyntaxException
-     */
-
-    public static void main(String[] args) throws URISyntaxException {
-        final OAuthHttpSender.OAuthRequestBuilder oAuthBuilder =
-                OAuthHttpSender.newOAuthRequestBuilder("http://10.21.2.82:8081/sso-auth-server/oauth/token");
-        oAuthBuilder.clientId("bael-client").clientSecret("bael-secret").scope("1");
-        HttpSender client = oAuthBuilder.buildSender();
-        client.postString(new URI("http://google.com"),"hi",null);
     }
 }

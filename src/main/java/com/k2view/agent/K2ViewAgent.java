@@ -2,6 +2,7 @@ package com.k2view.agent;
 
 import com.k2view.agent.dispatcher.AgentDispatcher;
 import com.k2view.agent.dispatcher.AgentDispatcherHttp;
+import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.postman.CloudManager;
 import com.k2view.agent.postman.Postman;
 
@@ -56,7 +57,7 @@ public class K2ViewAgent {
      * and calling the `start()` method.
      */
     public static void main(String[] args) {
-        Postman postman = new CloudManager(env("K2_MAILBOX_ID"), env("K2_MANAGER_URL"));
+        Postman postman = new CloudManager(env("K2_MAILBOX_ID"), env("K2_MANAGER_URL"), HttpSender.get());
         int interval = parseInt(def(env("K2_POLLING_INTERVAL"), "10"));
         AgentDispatcherHttp sender = new AgentDispatcherHttp(10_000);
         var agent = new K2ViewAgent(postman, interval, sender);

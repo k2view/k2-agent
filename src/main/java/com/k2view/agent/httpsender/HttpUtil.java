@@ -68,7 +68,7 @@ public class HttpUtil {
 
     private static String CONTENT_TYPE = "application/json";
 
-    protected static HttpRequest.Builder buildRequest(URI uri, Map<String, String> headers, int timeout) {
+    public static HttpRequest.Builder buildRequest(URI uri, Map<String, String> headers, int timeout) {
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(uri)
                 .timeout(Duration.ofSeconds(timeout));
