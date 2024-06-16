@@ -24,6 +24,9 @@ A Helm chart for k2view cloud manager site agent
 | secrets.K2_MANAGER_URL | string | `"https://cloud.k2view.com/api/mailbox"` | K2view cloud manager url. |
 | secrets.kubeInterface | string | `"https://kubernetes.default.svc"` | K8s API interface, need to be accessble from the agent. |
 | secrets.kubeToken | string | `""` | Token to access k8s API, If serviceAccount.create is true this env will be ignored and will use the tocken of creates SA. |
+| secrets.OAUTH_SERVER_URL | string | `""` | Oauth server url. |
+| secrets.OAUTH_CLIENT_ID | string | `""` | Oauth client id. |
+| secrets.OAUTH_CLIENT_SECRET | string | `""` | Oauth client secret. |
 | serviceAccount.create | bool | `true` | Create service account for agent. |
 | serviceAccount.name | string | `"k2view-agent"` | Service account name for agent. |
 

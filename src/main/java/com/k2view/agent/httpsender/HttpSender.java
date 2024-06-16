@@ -1,42 +1,37 @@
 package com.k2view.agent.httpsender;
 
+import com.k2view.agent.httpsender.oauth.OAuthRequestBuilder;
+import com.k2view.agent.httpsender.simple.HttpSenderSimple;
+
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
 
-public class HttpSender implements AutoCloseable {
+public interface HttpSender extends AutoCloseable {
 
-    private int DEFAULT_TIMEOUT = 60; // seconds
-    private final HttpClient senderClient;
+    HttpResponse<String> send(URI uri, String body, Map<String, String> headers) throws Exception;
 
-    public HttpSender(HttpClient httpClient){
-        this.senderClient = httpClient == null ? HttpClient.newHttpClient() : httpClient;
-    }
+    static HttpSender get(){
+        String senderUrl = System.getProperty("OAUTH_SERVER_URL");
+        if(senderUrl != null && !senderUrl.isEmpty()){
+            String oAuthServerUrl = System.getProperty("OAUTH_SERVER_URL");
+            if(oAuthServerUrl == null || oAuthServerUrl.isEmpty()){
+                throw new IllegalArgumentException("OAuth server URL cannot be null or empty");
+            }
+            String clientId = System.getProperty("OAUTH_CLIENT_ID");
+            if(clientId == null || clientId.isEmpty()){
+                throw new IllegalArgumentException("Client ID cannot be null or empty");
+            }
+            String clientSecret = System.getProperty("OAUTH_CLIENT_SECRET");
+            if(clientSecret == null || clientSecret.isEmpty()){
+                throw new IllegalArgumentException("Client secret cannot be null or empty");
+            }
 
-    public HttpSender(){
-        this(null);
-    }
-
-    public HttpResponse<String> postString(URI uri, String body, Map<String, String> headers) {
-        return postString(uri,body,headers,DEFAULT_TIMEOUT);
-    }
-
-    public HttpResponse<String> postString(URI uri, String body, Map<String, String> headers,int timeout) {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(uri, headers,timeout);
-        return sendString(requestBuilder.POST(HttpRequest.BodyPublishers.ofString(body)).build());
-    }
-
-    protected HttpResponse<String> sendString(HttpRequest request) {
-        return HttpUtil.rte(() -> senderClient.send(request, HttpResponse.BodyHandlers.ofString()));
-    }
-
-
-    @Override
-    public void close() {
-        if (senderClient != null) {
-            senderClient.close();
+            var builder = new OAuthRequestBuilder(oAuthServerUrl);
+            builder.clientId(clientId).clientSecret(clientSecret).timeout(60);
+            return builder.buildSender();
         }
+
+        return new HttpSenderSimple();
     }
 }
