@@ -47,7 +47,11 @@ public class CloudManager implements Postman {
 
         try {
             final HttpResponse<String> response = client.send(uri, body, null);
-            String jsonArrayString = response.body(); // Check response status code ?
+            if(response.statusCode() != 201) {
+                Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + response.body());
+                return new Requests(List.of(), 30);
+            }
+            String jsonArrayString = response.body();
             return Utils.gson.fromJson(jsonArrayString, Requests.class);
         } catch (Exception e) {
             Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + e.getMessage());

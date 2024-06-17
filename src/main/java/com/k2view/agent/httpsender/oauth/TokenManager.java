@@ -112,11 +112,11 @@ public class TokenManager {
                 valid = false;
             }
         } else if (issuedAt > 0) { // Salesforce specific
-            if (oBuilder.tokenExpiration > 0 && issuedAt + (oBuilder.tokenExpiration * 1000) > now) {
+            if (oBuilder.tokenExpiration > 0 && issuedAt + (oBuilder.tokenExpiration * 1000L) > now) {
                 valid = false;
             }
         } else {
-            if (oBuilder.tokenExpiration > 0 && tokenCreationTime + (oBuilder.tokenExpiration * 1000) > now) {
+            if (oBuilder.tokenExpiration > 0 && tokenCreationTime + (oBuilder.tokenExpiration * 1000L) > now) {
                 valid = false;
             }
         }
@@ -144,13 +144,8 @@ public class TokenManager {
         h.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
         h.put("Accept", "application/json");
         if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.BasicAuthHeader) {
-            if (!HttpUtil.isEmpty(oBuilder.username)) {
-                h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.username + ":" + oBuilder.password));
-            } else if (!HttpUtil.isEmpty(oBuilder.clientId) && !HttpUtil.isEmpty(oBuilder.clientSecret)) {
-                h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.clientId + ":" + oBuilder.clientSecret));
-            }
+            h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.clientId + ":" + oBuilder.clientSecret));
         }
-
         return h;
     }
 }
