@@ -14,9 +14,9 @@ public interface Postman {
      */
     Requests getInboxMessages(List<Response> responses);
 
-    record PostmanRequestBody(List<Response> responses, String id, String since) {
+    record PostmanRequestBody(List<Response.ResponseSimple> responses, String id, String since) {
         PostmanRequestBody(List<Response> responses, String id){
-            this(responses, id, "0");
+            this(responses.stream().map(Response::toSimple).toList(), id, "0");
         }
     }
 }
