@@ -10,10 +10,7 @@ import static java.util.Objects.requireNonNull;
 
 public class OAuthRequestBuilder {
 
-    private HttpClient httpClient;
     String authServerUrl;
-    String username;
-    String password;
     String scope;
     String clientId;
     String clientSecret;
@@ -28,19 +25,7 @@ public class OAuthRequestBuilder {
     }
 
     public OAuthHttpSender buildSender() {
-        return new OAuthHttpSender(httpClient, new TokenManager(this), timeout);
-    }
-
-    public OAuthRequestBuilder username(String username) {
-        requireNonNull(username, "username must be non-null");
-        this.username = username;
-        return this;
-    }
-
-    public OAuthRequestBuilder password(String password) {
-        requireNonNull(password, "password must be non-null");
-        this.password = password;
-        return this;
+        return new OAuthHttpSender(HttpClient.newHttpClient(), new TokenManager(this), timeout);
     }
 
     public OAuthRequestBuilder clientId(String clientId) {
@@ -65,35 +50,8 @@ public class OAuthRequestBuilder {
         return this;
     }
 
-    public OAuthRequestBuilder tokenExpiration(int expirationInSeconds) {
-        this.tokenExpiration = expirationInSeconds;
-        return this;
-    }
-
-    public OAuthRequestBuilder clientAuthentication(OAuthHttpSender.ClientAuthentication clientAuthentication) {
-        this.clientAuthentication = clientAuthentication;
-        return this;
-    }
-
-    public OAuthRequestBuilder extraHeaders(Map<String, String> extraHeaders) {
-        this.extraHeaders = extraHeaders == null ? new HashMap<>() : extraHeaders;
-        return this;
-    }
-
-    public OAuthRequestBuilder httpClient(HttpClient client) {
-        this.httpClient = client;
-        return this;
-    }
-
     String buildPostData() {
-        String postStr;
-        if (!HttpUtil.isEmpty(username)) {
-            // grant_type=password
-            postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "password", "username", username, "password", password, "scope", scope);
-        } else {
-            // grant_type=client_credentials
-            postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "client_credentials", "scope", scope);
-        }
+        String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "client_credentials", "scope", scope);
         if (clientAuthentication == OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody) {
             postStr += "&" + HttpUtil.buildPostString("client_id", clientId, "client_secret", clientSecret);
         }

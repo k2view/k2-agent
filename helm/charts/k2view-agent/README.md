@@ -27,6 +27,7 @@ A Helm chart for k2view cloud manager site agent
 | secrets.OAUTH_SERVER_URL | string | `""` | Oauth server url. |
 | secrets.OAUTH_CLIENT_ID | string | `""` | Oauth client id. |
 | secrets.OAUTH_CLIENT_SECRET | string | `""` | Oauth client secret. |
+| secrets.OAUTH_SCOPE | string | `""` | Oauth scope, optinal if cloud manager need role from mailbox.
 | serviceAccount.create | bool | `true` | Create service account for agent. |
 | serviceAccount.name | string | `"k2view-agent"` | Service account name for agent. |
 
