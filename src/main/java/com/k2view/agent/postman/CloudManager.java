@@ -1,5 +1,6 @@
 package com.k2view.agent.postman;
 
+import com.k2view.agent.Request;
 import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.Requests;
 import com.k2view.agent.Response;
@@ -7,6 +8,7 @@ import com.k2view.agent.Utils;
 
 import java.net.URI;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -34,10 +36,6 @@ public class CloudManager implements Postman {
         this.mailboxId = mailboxId;
         this.uri = URI.create(mailboxUrl);
         this.client = client;
-    }
-
-    public CloudManager(String mailboxId, String mailboxUrl) {
-        this(mailboxId, mailboxUrl, HttpSender.get());
     }
 
     @Override

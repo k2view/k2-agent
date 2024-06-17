@@ -31,8 +31,8 @@ public record Request(String taskId, String url, String method, Map<String, Obje
 
     @Override
     public String toString() {
-        return "Request{ taskId='%s', url='%s', method='%s', header='%s', body='%s', tryCount='%s', startTime='%s' }"
-                .formatted(taskId, url, method, header, body, tryCount[0], startTime);
+        return "Request{ taskId='%s', url='%s', method='%s', tryCount='%s', startTime='%s' }"
+                .formatted(taskId, url, method, tryCount[0], startTime);
     }
 
     public static class Adapter extends TypeAdapter<Request> {
