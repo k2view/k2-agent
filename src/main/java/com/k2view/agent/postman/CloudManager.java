@@ -53,7 +53,7 @@ public class CloudManager implements Postman {
             return Utils.gson.fromJson(jsonArrayString, Requests.class);
         } catch (Exception e) {
             Utils.logMessage("ERROR", "Failed to fetch messages from the server: " + e.getMessage());
-            return new Requests(List.of(), 0);
+            return new Requests(List.of(), 30);
         }
     }
 }
