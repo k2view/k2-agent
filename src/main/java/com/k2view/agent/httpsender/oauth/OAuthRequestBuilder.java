@@ -14,11 +14,11 @@ public class OAuthRequestBuilder {
     String scope;
     String clientId;
     String clientSecret;
-    OAuthHttpSender.ClientAuthentication clientAuthentication = OAuthHttpSender.ClientAuthentication.BasicAuthHeader;
+    OAuthHttpSender.ClientAuthentication clientAuthentication = OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody;
     int timeout = 60;
     int tokenExpiration = -1;
+    Map<String,String> tokenRequestCustomHeaders =new HashMap<>();
 
-    Map<String, String> extraHeaders = new HashMap<>();
 
     public OAuthRequestBuilder(String authServerUrl) {
         this.authServerUrl = authServerUrl;
@@ -33,6 +33,18 @@ public class OAuthRequestBuilder {
         this.clientId = clientId;
         return this;
     }
+
+    public OAuthRequestBuilder addTokenRequestCustomHeaders(String name,String value){
+        requireNonNull(name, "name must be non-null");
+        this.tokenRequestCustomHeaders.put(name,value);
+        return this;
+    }
+
+    public OAuthRequestBuilder clientAuthentication(OAuthHttpSender.ClientAuthentication type){
+        this.clientAuthentication = type;
+        return this;
+    }
+
 
     public OAuthRequestBuilder clientSecret(String clientSecret) {
         requireNonNull(clientSecret, "clientSecret must be non-null");

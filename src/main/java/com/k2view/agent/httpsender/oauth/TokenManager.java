@@ -1,4 +1,4 @@
-package com.k2view.agent.httpsender.oauth;
+ package com.k2view.agent.httpsender.oauth;
 
 import com.k2view.agent.httpsender.HttpUtil;
 
@@ -53,7 +53,7 @@ public class TokenManager {
     }
 
     private void refreshToken() throws IOException, InterruptedException {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
+        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI,HttpUtil.merge(authHeaders(),oBuilder.tokenRequestCustomHeaders), oBuilder.timeout);
         final String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "refresh_token", "refresh_token", refreshToken, "scope", oBuilder.scope);
         requestBuilder.POST(ofString(postStr));
         try (HttpClient client = HttpClient.newHttpClient()) {
@@ -68,7 +68,7 @@ public class TokenManager {
     }
 
     private void getNewToken() throws IOException, InterruptedException {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
+        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI,HttpUtil.merge(authHeaders(),oBuilder.tokenRequestCustomHeaders), oBuilder.timeout);
         String postStr = oBuilder.buildPostData();
         requestBuilder.POST(ofString(postStr));
         try {
@@ -140,7 +140,7 @@ public class TokenManager {
     }
 
     private Map<String, String> authHeaders() {
-        Map<String, String> h = new HashMap<>(oBuilder.extraHeaders);
+        Map<String, String> h = new HashMap<>();
         h.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
         h.put("Accept", "application/json");
         if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.BasicAuthHeader) {

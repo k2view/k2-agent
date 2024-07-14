@@ -12,24 +12,32 @@ public interface HttpSender extends AutoCloseable {
 
     HttpResponse<String> send(URI uri, String body, Map<String, String> headers) throws Exception;
 
-    static HttpSender get(){
+    static HttpSender get() {
         String senderUrl = Utils.env("OAUTH_SERVER_URL");
-        if(senderUrl != null && !senderUrl.isEmpty()){
+        if (senderUrl != null && !senderUrl.isEmpty()) {
             String clientId = Utils.env("OAUTH_CLIENT_ID");
-            if(clientId == null || clientId.isEmpty()){
+            if (clientId == null || clientId.isEmpty()) {
                 throw new IllegalArgumentException("Client ID cannot be null or empty");
             }
             String clientSecret = Utils.env("OAUTH_CLIENT_SECRET");
-            if(clientSecret == null || clientSecret.isEmpty()){
+            if (clientSecret == null || clientSecret.isEmpty()) {
                 throw new IllegalArgumentException("Client secret cannot be null or empty");
             }
 
             String scope = Utils.env("OAUTH_SCOPE");
-            if(scope == null || scope.isEmpty()){
+            if (scope == null || scope.isEmpty()) {
                 scope = "0";
             }
 
+            String consumerKey = Utils.env("OAUTH_CONSUMER_KEY");
+            String consumerSecret = Utils.env("OAUTH_CONSUMER_SECRET");
+
             var builder = new OAuthRequestBuilder(senderUrl);
+
+            if (!HttpUtil.isEmpty(consumerKey) && !HttpUtil.isEmpty(consumerSecret)) {
+                builder.addTokenRequestCustomHeaders("Authorization", "Basic " + HttpUtil.encode(consumerKey + ":" + consumerSecret));
+            }
+
             return builder.clientId(clientId)
                     .clientSecret(clientSecret)
                     .timeout(60)
