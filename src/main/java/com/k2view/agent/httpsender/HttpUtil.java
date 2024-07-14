@@ -8,6 +8,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -24,6 +25,16 @@ public class HttpUtil {
             checkInterrupt(e);
             throw wrapCause(RuntimeException::new, e);
         }
+    }
+
+    public static Map<String,String> merge(Map<String,String>... maps){
+        Map<String,String> merged = new HashMap<>();
+        for(Map<String,String> m : maps){
+            if(m != null){
+                merged.putAll(m);
+            }
+        }
+        return merged;
     }
 
     public static void rte(WrapProcedure wrap) {

@@ -49,11 +49,6 @@ public class OAuthHttpSender implements HttpSender {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
             tokenMgr.invalidateToken();
-            token = tokenMgr.getToken();
-            postHeaders = addAuth(h, token);
-            final HttpRequest newRequest = HttpUtil.buildRequest(uri, postHeaders, timeout)
-                    .POST(b)
-                    .build();
 
             // Send with the token
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
