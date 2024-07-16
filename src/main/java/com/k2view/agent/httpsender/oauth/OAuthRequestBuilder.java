@@ -58,6 +58,17 @@ public class OAuthRequestBuilder {
         return this;
     }
 
+    public OAuthRequestBuilder addTokenRequestCustomHeaders(String name,String value){
+        requireNonNull(name, "name must be non-null");
+        this.tokenRequestCustomHeaders.put(name,value);
+        return this;
+    }
+
+    public OAuthRequestBuilder clientAuthentication(OAuthHttpSender.ClientAuthentication type){
+        this.clientAuthentication = type;
+        return this;
+    }
+
     public OAuthRequestBuilder clientSecret(String clientSecret) {
         requireNonNull(clientSecret, "clientSecret must be non-null");
         this.clientSecret = clientSecret;
