@@ -17,10 +17,9 @@ public class OAuthRequestBuilder {
     String scope;
     String clientId;
     String clientSecret;
-    OAuthHttpSender.ClientAuthentication clientAuthentication = OAuthHttpSender.ClientAuthentication.BasicAuthHeader;
+    OAuthHttpSender.ClientAuthentication clientAuthentication = OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody;
     int timeout = 60;
     int tokenExpiration = -1;
-
     Map<String, String> extraHeaders = new HashMap<>();
 
     public OAuthRequestBuilder(String authServerUrl) {
