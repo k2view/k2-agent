@@ -16,8 +16,8 @@ public class HttpSenderSimple implements HttpSender {
 
     private final HttpClient senderClient;
 
-    public HttpSenderSimple(){
-        this.senderClient = HttpClient.newHttpClient();
+    public HttpSenderSimple(HttpClient httpClient){
+        this.senderClient = httpClient;
     }
 
     @Override
