@@ -71,11 +71,11 @@ public interface HttpSender extends AutoCloseable {
         HttpClient.Builder httpClientBuilder = HttpClient.newBuilder().version(httpVersion);
 
         // Porxy Capabilties Logic
-        String agentProxyUrl = Utils.env("AGENT_PROXY_URL");
+        String agentProxyUrl = Utils.env("AGENT_PROXY_HOST");
         if(agentProxyUrl == null || agentProxyUrl.isEmpty()){
             
             int proxyPort = 80; // by default set for http port
-            String agentProxyUrlPort = Utils.env("AGENT_PROXY_URL_PORT");
+            String agentProxyUrlPort = Utils.env("AGENT_PROXY_PORT");
 
             if (agentProxyUrlPort != null && !agentProxyUrlPort.isEmpty()) {
                 try {
