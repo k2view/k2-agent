@@ -17,7 +17,7 @@ spec:
     spec:
       {{- if .Values.image.addDockerRegistry }}
       imagePullSecrets:
-        -name: {{ .Values.image.dockerRegistrySecret }}
+        - name: {{ .Values.image.dockerRegistrySecret }}
       {{- end }}
       containers:
         - name: {{ .Chart.Name }}
