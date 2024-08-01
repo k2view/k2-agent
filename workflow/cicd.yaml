@@ -1,0 +1,42 @@
+name: Build and Manage Docker Images
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      REPO_LINK: https://github.com/k2view-LTD/k2-agent.git
+      REPO_BRANCH: master
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        repository: ${{ env.REPO_LINK }}
+        ref: ${{ env.REPO_BRANCH }}
+        path: k2v-agent
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker image
+      working-directory: k2v-agent
+      run: |
+        docker build -t ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:${{ github.event.inputs.version || '1.0' }} .
+        docker-squash -v -t ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:${{ github.event.inputs.version || '1.0' }} ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:${{ github.event.inputs.version || '1.0' }}_full_size
+        docker rmi -f ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:${{ github.event.inputs.version || '1.0' }}_full_size
+
+    - name: Update image:latest on Docker
+      if: github.event.inputs.update_image_latest == 'true'
+      run: |
+        docker tag ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:${{ github.event.inputs.version || '1.0' }} ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:latest
+
+    - name: Remove image from Docker
+      if: github.event.inputs.remove_image == 'true'
+      run: |
+        docker rmi -f ${{ github.event.inputs.imageName || 'k2view/k2v-agent' }}:${{ github.event.inputs.version || '1.0' }}
