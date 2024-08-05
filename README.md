@@ -40,7 +40,7 @@ K2View Agent is a high-performance Java application designed for efficient handl
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-org/k2view-agent.git
+   git clone [https://github.com/your-org/k2view-agent.git](https://github.com/k2view/k2-agent.git)
    ```
 
 2. Navigate to the project directory:
@@ -52,8 +52,13 @@ K2View Agent is a high-performance Java application designed for efficient handl
    ```
    mvn clean package
    ```
+   or
 
-This will create a JAR file in the `target` directory.
+   ```
+   docker build -t k2view-agent .
+   ```
+
+To run the code, this will create a JAR file in the `target` directory or a docker image.
 
 ## 🚀 Usage
 
