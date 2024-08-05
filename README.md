@@ -40,12 +40,12 @@ K2View Agent is a high-performance Java application designed for efficient handl
 
 1. Clone the repository:
    ```
-   git clone [https://github.com/your-org/k2view-agent.git](https://github.com/k2view/k2-agent.git)
+   git clone https://github.com/k2view/k2-agent.git
    ```
 
 2. Navigate to the project directory:
    ```
-   cd k2view-agent
+   cd k2-agent
    ```
 
 3. Build the project:
