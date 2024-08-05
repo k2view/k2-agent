@@ -146,7 +146,7 @@ Common issues and their solutions:
 - **SSL errors**: Ensure proper SSL certificate validation is implemented.
 - **Out of memory errors**: Adjust JVM heap size or review request queue size.
 
-For more issues, please check our [FAQ](link-to-faq) or open an issue on GitHub.
+For more issues, please open a K2View support ticket.
 
 ## 📄 License
 
