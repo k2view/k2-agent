@@ -1,64 +1,163 @@
-# K2ViewAgent Java Project
+# K2View Agent 🚀
 
-## Overview
-The K2ViewAgent Java Project consists of two main classes, `K2ViewAgent` and `AgentSender`, designed to manage and process HTTP requests asynchronously.
+[![Java Version](https://img.shields.io/badge/Java-21%2B-blue.svg)](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+## 📋 Table of Contents
+- [Description](#-description)
+- [Features](#-features)
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Configuration](#-configuration)
+- [Architecture](#-architecture)
+- [Security](#-security)
+- [Contributing](#-contributing)
+- [Troubleshooting](#-troubleshooting)
+- [License](#-license)
+- [Contact](#-contact)
 
-## K2ViewAgent Class
-### Description
-The `K2ViewAgent` class serves as the main entry point of the program, managing the flow of HTTP requests and responses.
+## 📝 Description
 
-### Features
-- **Manager Thread**: Reads a list of URLs at a specified interval and adds them to a concurrent queue.
-- **Worker Thread**: Polls the queue, sends HTTP GET requests, and handles responses asynchronously.
+K2View Agent is a high-performance Java application designed for efficient handling of asynchronous HTTP requests and responses. It serves as a robust middleware solution for managing communication between K2View Cloud Orchestrator and the remote Kubernetes environment.
 
-### Usage
-To run the program, execute the `main` method. Ensure that the required environment variables and dependencies are properly configured.
+## ✨ Features
 
-## AgentSender Class
-### Description
-The `AgentSender` class provides asynchronous mechanisms for sending HTTP requests and receiving responses, utilizing concurrent queues and executor services.
+- 🔄 Asynchronous HTTP request handling
+- 📊 Customizable request queuing with size limits
+- 🔒 SSL support with configurable certificate validation
+- 🎛️ Flexible response handling with timeout options
+- 📈 Comprehensive logging of request and response activities
+- 🌐 Dynamic environment variable support for URLs and headers
+- 🧵 Multi-threaded processing for enhanced performance
 
-### Features
-- **Asynchronous Request Handling**: Sends HTTP requests and receives responses asynchronously.
-- **Concurrent Queues**: Utilizes `LinkedBlockingQueue` for managing incoming requests and outgoing responses.
-- **Executor Services**: Employs `ExecutorService` for handling request and response processing.
+## 🔧 Requirements
 
-### Usage
-Create an instance of `AgentSender`, and use the `send` method to add requests to the queue. Use the `receive` or `receiveAsync` methods to retrieve responses.
+- Java 21 or higher
+- Maven 3.6+ (for building the project)
+- A compatible IDE (e.g., IntelliJ IDEA, VS Code, Eclipse) for development
 
-## Getting Started
-1. Clone the repository.
-2. Ensure Java and required libraries are installed.
-3. Configure environment variables as needed.
-4. Run the `K2ViewAgent` class.
+## 📦 Installation
 
-## Dependencies
-- Google Gson: For JSON parsing.
-- SLF4J: For logging.
-- Java HTTP Client: For sending HTTP requests.
+1. Clone the repository:
+   ```
+   git clone https://github.com/your-org/k2view-agent.git
+   ```
 
-## Environment Variables
-- `K2VIEW_MANAGER_URL`: URL for fetching the list of URLs to process.
+2. Navigate to the project directory:
+   ```
+   cd k2view-agent
+   ```
 
-## CI/CD
-- Jenkinsfile job for building the agent's image.
-### Parameters
-| Name                  | Type      | Description                           | Default Value      |
-|-----------------------|-----------|---------------------------------------|--------------------|
-| imageName             | String    | Image name                            | 'k2view/k2v-agent' |
-| version               | String    | Image tag                             | '1.0'              |
-| update_image_latest   | Boolean   | Change tag to latest in local Docker  | False              |
-| remove_image          | Boolean   | Remove image from local Docker        | False              |
+3. Build the project:
+   ```
+   mvn clean package
+   ```
 
-## Contributing
-Contributions are welcome. Please follow the standard Java coding conventions and ensure proper testing before submitting pull requests.
+This will create a JAR file in the `target` directory.
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
+## 🚀 Usage
 
-## Contact
-For any inquiries or issues, please open an issue in the repository.
+### Initializing the Agent
 
+```java
+AgentDispatcher dispatcher = new AgentDispatcherHttp(1000); // 1000 is the max queue size
+```
+
+### Sending a Request
+
+```java
+Map<String, Object> headers = new HashMap<>();
+headers.put("Content-Type", "application/json");
+
+Request request = new Request("task-123", "https://api.example.com/data", "POST", headers, "{\"key\":\"value\"}");
+dispatcher.send(request);
+```
+
+### Receiving Responses
+
+```java
+List<Response> responses = dispatcher.receive(10, TimeUnit.SECONDS);
+for (Response response : responses) {
+    System.out.println("Task ID: " + response.taskId());
+    System.out.println("Status Code: " + response.code());
+    System.out.println("Body: " + response.body());
+}
+```
+
+### Closing the Dispatcher
+
+```java
+dispatcher.close();
+```
+
+## ⚙️ Configuration
+
+The application uses environment variables for configuration:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `K2_MAILBOX_ID` | The mailbox ID for the agent | - |
+| `K2_MANAGER_URL` | The URL of the manager service | - |
+| `K2_POLLING_INTERVAL` | The polling interval in seconds | 10 |
+
+Set these environment variables before running the application.
+
+## 🏗️ Architecture
+
+The K2View Agent is built on a modular architecture:
+
+- `AgentDispatcher`: Core interface defining the contract for request dispatching.
+- `AgentDispatcherHttp`: Implementation of `AgentDispatcher` using Java's `HttpClient`.
+- `Request`: Represents an HTTP request with task ID, URL, method, headers, and body.
+- `Response`: Encapsulates the HTTP response with task ID, status code, and body.
+
+## 🔐 Security
+
+### SSL Configuration
+
+By default, the application trusts all SSL certificates. For production, implement proper certificate validation:
+
+1. Modify `noCertificateCheckSSLContext()` in `AgentDispatcherHttp`.
+2. Use a custom `TrustManager` that validates certificates against your trusted CA list.
+
+### Best Practices
+
+- Use HTTPS for all communications.
+- Implement proper authentication mechanisms (e.g., API keys, OAuth).
+- Regularly update dependencies to patch security vulnerabilities.
+
+## 🤝 Contributing
+
+We welcome contributions to K2View Agent! Here's how you can help:
+
+1. Fork the repository.
+2. Create a new branch: `git checkout -b feature/your-feature-name`.
+3. Make your changes and commit: `git commit -m 'Add some feature'`.
+4. Push to your fork: `git push origin feature/your-feature-name`.
+5. Create a pull request.
+
+Please ensure your code adheres to our coding standards and includes appropriate tests.
+
+## 🔍 Troubleshooting
+
+Common issues and their solutions:
+
+- **Connection timeouts**: Check network settings and firewall configurations.
+- **SSL errors**: Ensure proper SSL certificate validation is implemented.
+- **Out of memory errors**: Adjust JVM heap size or review request queue size.
+
+For more issues, please check our [FAQ](link-to-faq) or open an issue on GitHub.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📞 Contact
+
+For support or queries, please contact:
+
+- Email: support@k2view.com
+ 
 ---
 
-Feel free to modify or add any sections as needed to better suit the project's requirements or documentation standards.
+Made with ❤️ by the K2View Team

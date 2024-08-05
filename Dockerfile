@@ -9,6 +9,8 @@ RUN mvn dependency:go-offline
 COPY src/ /app/src/
 RUN mvn package -Pnative -DskipTests
 
+## Run Time Image
+
 FROM alpine:latest
 
 ENV GLIBC_REPO=https://github.com/sgerrand/alpine-pkg-glibc
@@ -24,6 +26,7 @@ RUN apk add --allow-untrusted --force-overwrite /tmp/*.apk
 
 # Fix the symbolic link issue after glibc installation
 RUN ln -sf /usr/glibc-compat/lib/ld-2.30.so /usr/glibc-compat/lib/ld-linux-x86-64.so.2
+RUN ln -sf /usr/glibc-compat/lib/ld-2.30.so /lib64/ld-linux-x86-64.so.2
 
 # Cleanup
 RUN rm -v /tmp/*.apk && \
