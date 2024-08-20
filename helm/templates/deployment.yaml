@@ -75,3 +75,6 @@ spec:
             requests:
               memory: {{ .Values.resources.requests.memory }}
               cpu: {{ .Values.resources.requests.cpu }}
+          securityContext:
+            readOnlyRootFilesystem: true # Mounts the root filesystem as read-only
+            runAsNonRoot: true # Ensure the container does not run as root user
