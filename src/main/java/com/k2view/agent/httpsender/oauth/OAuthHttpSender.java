@@ -18,7 +18,7 @@ public class OAuthHttpSender implements HttpSender {
     public enum ClientAuthentication {BasicAuthHeader, ClientCredentialsInBody}
     static final Set<Integer> NEED_TO_RENEW_TOKEN_ERROR_CODES = Set.of(401);
 
-    static final String GRANT_TYPE_CONST = "grant_type";
+    public static final String GRANT_TYPE_CONST = "grant_type";
 
     private final HttpClient httpClient;
 

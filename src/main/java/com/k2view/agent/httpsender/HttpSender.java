@@ -1,10 +1,8 @@
 package com.k2view.agent.httpsender;
 
 import com.k2view.agent.Utils;
-import com.k2view.agent.httpsender.oauth.OAuthHttpSender;
-import com.k2view.agent.httpsender.oauth.OAuthRequestBuilder;
-import com.k2view.agent.httpsender.oauth.TokenManager;
-import com.k2view.agent.httpsender.simple.HttpSenderSimple;
+import com.k2view.agent.httpsender.oauthKeyBank.OAuthKeyBankHttpSenderBuilder;
+import com.k2view.agent.httpsender.simple.HttpSenderBuilder;
 
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
@@ -18,66 +16,43 @@ public interface HttpSender extends AutoCloseable {
     HttpResponse<String> send(URI uri, String body, Map<String, String> headers) throws Exception;
 
     static HttpSender get() {
-        String senderUrl = Utils.env("OAUTH_SERVER_URL");
-        if (senderUrl != null && !senderUrl.isEmpty()) {
-            String clientId = Utils.env("OAUTH_CLIENT_ID");
-            if (clientId == null || clientId.isEmpty()) {
-                throw new IllegalArgumentException("Client ID cannot be null or empty");
-            }
-            String clientSecret = Utils.env("OAUTH_CLIENT_SECRET");
-            if (clientSecret == null || clientSecret.isEmpty()) {
-                throw new IllegalArgumentException("Client secret cannot be null or empty");
-            }
-
+        String oauthServerUrl = Utils.env("OAUTH_SERVER_URL");
+        if (!HttpUtil.isEmpty(oauthServerUrl)) {
+            String id = Utils.env("OAUTH_CLIENT_ID");
+            String key = Utils.def(Utils.env("OAUTH_CLIENT_SECRET"),Utils.env("OAUTH_CLIENT_KEY"));
             String scope = Utils.env("OAUTH_SCOPE");
-            if (scope == null || scope.isEmpty()) {
-                scope = "0";
-            }
-
             String consumerKey = Utils.env("OAUTH_CONSUMER_KEY");
             String consumerSecret = Utils.env("OAUTH_CONSUMER_SECRET");
+            Boolean logAuthServerRequests = Boolean.parseBoolean(Utils.env("OAUTH_LOG_TOKEN_REQUESTS"));
 
-            var builder = new OAuthRequestBuilder(senderUrl);
+            var builder = new OAuthKeyBankHttpSenderBuilder(oauthServerUrl);
 
-            if (!HttpUtil.isEmpty(consumerKey) && !HttpUtil.isEmpty(consumerSecret)) {
-                builder.addTokenRequestCustomHeaders("Authorization", "Basic " + HttpUtil.encode(consumerKey + ":" + consumerSecret));
-            }
-
-            return builder.clientId(clientId)
-                    .clientSecret(clientSecret)
+            return builder
+                    .id(id)
+                    .key(key)
+                    .consumerKey(consumerKey)
+                    .consumerSecret(consumerSecret)
                     .timeout(60)
                     .scope(scope)
-                    .buildSender();
+                    .logTokenRequests(logAuthServerRequests)
+                    .httpVersion(httpVersion())
+                    .proxySelector(httpProxy()).buildSender();
+
         }
 
-        // Default to HTTP/2 if not specified
-        HttpClient.Version httpVersion = HttpClient.Version.HTTP_2;
-        String httpVersionEnv = Utils.env("HTTP_VERSION");
+        // Fallback to simple http client
+        return new HttpSenderBuilder().httpVersion(httpVersion())
+                .proxySelector(httpProxy()).buildSender();
+    }
 
-        if (httpVersionEnv != null && !httpVersionEnv.isEmpty()) {
-            switch (httpVersionEnv) {
-                case "HTTP_1_1":
-                    httpVersion = HttpClient.Version.HTTP_1_1;
-                    break;
-                case "HTTP_2":
-                    httpVersion = HttpClient.Version.HTTP_2;
-                    break;
-                default:
-                    throw new IllegalArgumentException("Invalid HTTP version: " + httpVersionEnv);
-            }
-        }
-
-        // Http Client Builder
-        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder().version(httpVersion);
-
-        // Porxy Capabilties Logic
+    private static ProxySelector httpProxy() {
+        // Proxy Capabilities Logic
         String agentProxyUrl = Utils.env("AGENT_PROXY_HOST");
-        if(agentProxyUrl != null && !agentProxyUrl.isEmpty()){
-            
-            int proxyPort = 80; // by default set for http port
+        if (!HttpUtil.isEmpty(agentProxyUrl)) {
+            int proxyPort = 80;
             String agentProxyUrlPort = Utils.env("AGENT_PROXY_PORT");
 
-            if (agentProxyUrlPort != null && !agentProxyUrlPort.isEmpty()) {
+            if (!HttpUtil.isEmpty(agentProxyUrlPort)) {
                 try {
                     proxyPort = Integer.parseInt(agentProxyUrlPort);
                 } catch (NumberFormatException e) {
@@ -85,12 +60,16 @@ public interface HttpSender extends AutoCloseable {
                 }
             }
 
-            httpClientBuilder.proxy(ProxySelector.of(new InetSocketAddress(agentProxyUrl, proxyPort)));
+            return ProxySelector.of(new InetSocketAddress(agentProxyUrl, proxyPort));
         }
+        return null;
+    }
 
-        // Http Client
-        HttpClient httpClient = httpClientBuilder.build();
-
-        return new HttpSenderSimple(httpClient);
+    private static HttpClient.Version httpVersion() {
+        String httpVersionEnv = Utils.env("HTTP_VERSION");
+        if (!HttpUtil.isEmpty(httpVersionEnv)) {
+            return HttpClient.Version.valueOf(httpVersionEnv);
+        }
+        return HttpClient.Version.HTTP_2;
     }
 }

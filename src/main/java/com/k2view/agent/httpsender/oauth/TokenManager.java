@@ -1,5 +1,6 @@
- package com.k2view.agent.httpsender.oauth;
+package com.k2view.agent.httpsender.oauth;
 
+import com.k2view.agent.Utils;
 import com.k2view.agent.httpsender.HttpUtil;
 
 import java.io.IOException;
@@ -15,9 +16,9 @@ import static java.net.http.HttpRequest.BodyPublishers.ofString;
 public class TokenManager {
 
     private final URI authURI;
-    private final OAuthRequestBuilder oBuilder;
+    protected final OAuthHttpSenderBuilder oBuilder;
 
-    public TokenManager(OAuthRequestBuilder oBuilder) {
+    public TokenManager(OAuthHttpSenderBuilder oBuilder) {
         authURI = URI.create(oBuilder.authServerUrl);
         this.oBuilder = oBuilder;
     }
@@ -53,10 +54,13 @@ public class TokenManager {
     }
 
     private void refreshToken() throws IOException, InterruptedException {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI,HttpUtil.merge(authHeaders(),oBuilder.tokenRequestCustomHeaders), oBuilder.timeout);
+        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
         final String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "refresh_token", "refresh_token", refreshToken, "scope", oBuilder.scope);
         requestBuilder.POST(ofString(postStr));
-        try (HttpClient client = HttpClient.newHttpClient()) {
+        if(oBuilder.getLogTokenRequests()){
+            logTokenRequest(authURI.toString(),authHeaders(),postStr);
+        }
+        try (HttpClient client = oBuilder.createHttpClient(oBuilder.tokenServerHttpVersion, oBuilder.tokenServerProxySelector)) {
             final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
             if (OAuthHttpSender.NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
                 throw new IllegalStateException("Invalid refresh token");
@@ -68,11 +72,14 @@ public class TokenManager {
     }
 
     private void getNewToken() throws IOException, InterruptedException {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI,HttpUtil.merge(authHeaders(),oBuilder.tokenRequestCustomHeaders), oBuilder.timeout);
-        String postStr = oBuilder.buildPostData();
+        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
+        String postStr = buildGetTokenPostData();
         requestBuilder.POST(ofString(postStr));
         try {
-            try (final HttpClient client = HttpClient.newHttpClient()) {
+            if(oBuilder.getLogTokenRequests()){
+                logTokenRequest(authURI.toString(),authHeaders(),postStr);
+            }
+            try (final HttpClient client = oBuilder.createHttpClient(oBuilder.tokenServerHttpVersion, oBuilder.tokenServerProxySelector)) {
                 final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() < 200 || response.statusCode() >= 400) {
                     throw new IllegalStateException("Failed to get new token: " + response.body());
@@ -83,6 +90,16 @@ public class TokenManager {
             invalidateToken();
             throw ex;
         }
+    }
+
+    private static void logTokenRequest(String url, Map<String, String> headers, String postData) {
+        StringBuilder sb = new StringBuilder("POST").append(System.lineSeparator());
+        sb.append("'").append(url).append("'").append(System.lineSeparator());
+        for(Map.Entry<String,String> h : headers.entrySet()){
+            sb.append("-H ").append("'").append(h.getKey()).append(":").append(" ").append(h.getValue()).append("'").append(System.lineSeparator());
+        }
+        sb.append("-d ").append("'").append(postData).append("'").append(System.lineSeparator());
+        Utils.logMessage("INFO",sb.toString());
     }
 
     private void parseResponse(String body) {
@@ -101,7 +118,6 @@ public class TokenManager {
         }
         tokenCreationTime = System.currentTimeMillis();
     }
-
 
     private void checkTokensExpiration() {
         long now = System.currentTimeMillis();
@@ -139,13 +155,25 @@ public class TokenManager {
         refreshToken = null;
     }
 
-    private Map<String, String> authHeaders() {
+    protected Map<String, String> authHeaders() {
         Map<String, String> h = new HashMap<>();
-        h.put("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        h.put("Accept", "application/json");
+        if(!HttpUtil.isEmpty(oBuilder.contentType)){
+            h.put("Content-Type", oBuilder.contentType);
+        }
+        if(!HttpUtil.isEmpty(oBuilder.acceptedType)){
+            h.put("Accept", oBuilder.acceptedType);
+        }
         if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.BasicAuthHeader) {
             h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.clientId + ":" + oBuilder.clientSecret));
         }
         return h;
+    }
+
+    protected String buildGetTokenPostData() {
+        String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "client_credentials", "scope", oBuilder.scope);
+        if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody) {
+            postStr += "&" + HttpUtil.buildPostString("client_id", oBuilder.clientId, "client_secret", oBuilder.clientSecret);
+        }
+        return postStr;
     }
 }
