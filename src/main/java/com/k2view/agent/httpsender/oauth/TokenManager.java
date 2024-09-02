@@ -131,8 +131,8 @@ public class TokenManager {
             h.put("Accept", oBuilder.acceptedType);
         }
 
-        if (!HttpUtil.isEmpty(oBuilder.customBasicAuthUsername) && !HttpUtil.isEmpty(oBuilder.customBasicAuthPassword)) {
-            h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.customBasicAuthUsername + ":" + oBuilder.customBasicAuthPassword));
+        if (!HttpUtil.isEmpty(oBuilder.basicAuthUserId) && !HttpUtil.isEmpty(oBuilder.basicAuthPassword)) {
+            h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.basicAuthUserId + ":" + oBuilder.basicAuthPassword));
         } else if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.BasicAuthHeader) {
             h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.clientId + ":" + oBuilder.clientSecret));
         }

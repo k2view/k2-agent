@@ -17,8 +17,8 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
     String scope;
     String clientId;
     String clientSecret;
-    String customBasicAuthUsername = null;
-    String customBasicAuthPassword = null;
+    String basicAuthUserId = null;
+    String basicAuthPassword = null;
     OAuthHttpSender.ClientAuthentication clientAuthentication = OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody;
     int timeout = 60;
     long tokenExpiration = -1;
@@ -68,9 +68,9 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
         return this;
     }
 
-    public OAuthHttpSenderBuilder customBasicAuthCredentials(String username,String password) {
-        this.customBasicAuthUsername = username;
-        this.customBasicAuthPassword = password;
+    public OAuthHttpSenderBuilder basicAuthCredentials(String userid,String password) {
+        this.basicAuthUserId = userid;
+        this.basicAuthPassword = password;
         return this;
     }
 

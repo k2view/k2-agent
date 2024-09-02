@@ -41,22 +41,22 @@ public class HttpUtil {
 
     /**
      * Return http proxy
-     * @param agentProxyUrl
-     * @param agentProxyUrlPort
+     * @param proxyUrl
+     * @param proxyUrlPort
      * @return
      */
-    public static ProxySelector httpProxy(String agentProxyUrl, String agentProxyUrlPort) {
+    public static ProxySelector httpProxy(String proxyUrl, String proxyUrlPort) {
         // Proxy Capabilities Logic
-        if (!HttpUtil.isEmpty(agentProxyUrl)) {
+        if (!HttpUtil.isEmpty(proxyUrl)) {
             int proxyPort = 80;
-            if (!HttpUtil.isEmpty(agentProxyUrlPort)) {
+            if (!HttpUtil.isEmpty(proxyUrlPort)) {
                 try {
-                    proxyPort = Integer.parseInt(agentProxyUrlPort);
+                    proxyPort = Integer.parseInt(proxyUrlPort);
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Invalid port number: " + agentProxyUrlPort, e);
+                    throw new IllegalArgumentException("Invalid port number: " + proxyUrlPort, e);
                 }
             }
-            return ProxySelector.of(new InetSocketAddress(agentProxyUrl, proxyPort));
+            return ProxySelector.of(new InetSocketAddress(proxyUrl, proxyPort));
         }
         return null;
     }

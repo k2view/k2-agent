@@ -6,18 +6,12 @@ import com.k2view.agent.httpsender.simple.HttpSenderBuilder;
 
 import java.net.URI;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
 import java.util.Map;
 
 public interface HttpSender extends AutoCloseable {
 
     HttpResponse<String> send(URI uri, String body, Map<String, String> headers) throws Exception;
     
-    private static void set(String k, String v){
-        System.setProperty(k,v);
-    }
-
-
     static HttpSender get() {
         String oauthServerUrl = Utils.env("OAUTH_SERVER_URL");
 
@@ -28,7 +22,7 @@ public interface HttpSender extends AutoCloseable {
             String clientIdParamName = Utils.env("OAUTH_CLIENT_ID_PARAM_NAME");
             String clientSecretParamName = Utils.env("OAUTH_CLIENT_SECRET_PARAM_NAME");
             String scope = Utils.env("OAUTH_SCOPE");
-            String basicAuthUsername = Utils.env("OAUTH_BASIC_AUTH_USERNAME");
+            String basicAuthUsername = Utils.env("OAUTH_BASIC_AUTH_USERID");
             String basicAuthPassword = Utils.env("OAUTH_BASIC_AUTH_PASSWORD");
             String acceptedType = Utils.env("OAUTH_ACCEPTED_TYPE");
             String contentType = Utils.env("OAUTH_CONTENT_TYPE");
@@ -44,8 +38,7 @@ public interface HttpSender extends AutoCloseable {
                     .clientIdKeyName(clientIdParamName)
                     .clientSecret(clientSecret)
                     .clientSecretKeyName(clientSecretParamName)
-                    .customBasicAuthCredentials(basicAuthUsername, basicAuthPassword)
-                    .timeout(60)
+                    .basicAuthCredentials(basicAuthUsername, basicAuthPassword)
                     .scope(scope)
                     .acceptedType(acceptedType)
                     .contentType(contentType)
