@@ -1,6 +1,7 @@
 package com.k2view.agent.httpsender.oauth;
 
 import com.k2view.agent.httpsender.HttpSender;
+import com.k2view.agent.httpsender.HttpUtil;
 import com.k2view.agent.httpsender.simple.HttpSenderBuilder;
 
 import java.net.ProxySelector;
@@ -10,13 +11,17 @@ import static java.util.Objects.requireNonNull;
 
 public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
 
+    String clientIdKeyName = "client_id";
+    String clientSecretKeyName = "client_secret";
     String authServerUrl;
     String scope;
     String clientId;
     String clientSecret;
+    String customBasicAuthUsername = null;
+    String customBasicAuthPassword = null;
     OAuthHttpSender.ClientAuthentication clientAuthentication = OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody;
     int timeout = 60;
-    int tokenExpiration = -1;
+    long tokenExpiration = -1;
     String contentType = "application/x-www-form-urlencoded";
     String acceptedType = "application/json";
     HttpClient.Version tokenServerHttpVersion;
@@ -32,7 +37,7 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
         return new OAuthHttpSender(createHttpClient(), new TokenManager(this), timeout);
     }
 
-    public HttpSenderBuilder logTokenRequests(boolean logRequests) {
+    public OAuthHttpSenderBuilder logTokenRequests(boolean logRequests) {
         this.logTokenRequests = logRequests;
         return this;
     }
@@ -43,32 +48,17 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
         return this;
     }
 
-    public String getScope(){
-        return scope;
+    public OAuthHttpSenderBuilder clientIdKeyName(String keyName) {
+        if(!HttpUtil.isEmpty(keyName)) {
+            this.clientIdKeyName = keyName;
+        }
+        return this;
     }
 
-    public int getTimeout(){
-        return timeout;
-    }
-
-    public boolean getLogTokenRequests(){
-        return logTokenRequests;
-    }
-
-    public OAuthHttpSender.ClientAuthentication getClientAuthentication(){
-        return clientAuthentication;
-    }
-
-    public String getContentType(){
-        return contentType;
-    }
-
-    public String getAcceptedType(){
-        return acceptedType;
-    }
-
-    public OAuthHttpSenderBuilder clientAuthentication(OAuthHttpSender.ClientAuthentication type){
-        this.clientAuthentication = type;
+    public OAuthHttpSenderBuilder clientSecretKeyName(String keyName) {
+        if(!HttpUtil.isEmpty(keyName)) {
+            this.clientSecretKeyName = keyName;
+        }
         return this;
     }
 
@@ -78,29 +68,44 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
         return this;
     }
 
+    public OAuthHttpSenderBuilder customBasicAuthCredentials(String username,String password) {
+        this.customBasicAuthUsername = username;
+        this.customBasicAuthPassword = password;
+        return this;
+    }
+
     public OAuthHttpSenderBuilder scope(String scope) {
         this.scope = scope;
         return this;
     }
 
-    public HttpSenderBuilder authServerServerHttpVersion(HttpClient.Version version) {
+    public OAuthHttpSenderBuilder tokenExpiration(long tokenExpiration) {
+        this.tokenExpiration = tokenExpiration;
+        return this;
+    }
+
+    public OAuthHttpSenderBuilder authServerHttpVersion(HttpClient.Version version) {
         this.tokenServerHttpVersion = version;
         return this;
     }
 
-
-    public HttpSenderBuilder authServerServerProxySelector(ProxySelector proxySelector) {
+    public OAuthHttpSenderBuilder authServerProxySelector(ProxySelector proxySelector) {
         this.tokenServerProxySelector = proxySelector;
         return this;
     }
 
+
     public OAuthHttpSenderBuilder contentType(String contentType) {
-        this.contentType = contentType;
+        if(contentType != null) {
+            this.contentType = contentType;
+        }
         return this;
     }
 
     public OAuthHttpSenderBuilder acceptedType(String acceptedType) {
-        this.acceptedType = acceptedType;
+        if(acceptedType != null) {
+            this.acceptedType = acceptedType;
+        }
         return this;
     }
 

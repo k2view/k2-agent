@@ -2,6 +2,7 @@ package com.k2view.agent.httpsender.oauth;
 
 import com.k2view.agent.Utils;
 import com.k2view.agent.httpsender.HttpUtil;
+import com.k2view.agent.httpsender.simple.HttpSenderBuilder;
 
 import java.io.IOException;
 import java.net.URI;
@@ -24,7 +25,6 @@ public class TokenManager {
     }
 
     private String token = null;
-    private String refreshToken = null;
     private long issuedAt = 0; // salesforce specific
     private long expiresIn = 0; // In seconds
     private long tokenCreationTime = 0;
@@ -33,18 +33,7 @@ public class TokenManager {
         HttpUtil.rte(() -> {
             checkTokensExpiration();
             if (token == null) {
-                if (refreshToken == null) {
-                    getNewToken();
-                } else {
-                    try {
-                        refreshToken();
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                    } catch (Exception ex) {
-                        invalidateRefreshToken();
-                        getNewToken();
-                    }
-                }
+                getNewToken();
             }
         });
         if (HttpUtil.isEmpty(token)) {
@@ -53,33 +42,16 @@ public class TokenManager {
         return token;
     }
 
-    private void refreshToken() throws IOException, InterruptedException {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
-        final String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "refresh_token", "refresh_token", refreshToken, "scope", oBuilder.scope);
-        requestBuilder.POST(ofString(postStr));
-        if(oBuilder.getLogTokenRequests()){
-            logTokenRequest(authURI.toString(),authHeaders(),postStr);
-        }
-        try (HttpClient client = oBuilder.createHttpClient(oBuilder.tokenServerHttpVersion, oBuilder.tokenServerProxySelector)) {
-            final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-            if (OAuthHttpSender.NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
-                throw new IllegalStateException("Invalid refresh token");
-            }
-
-            parseResponse(response.body());
-        }
-
-    }
-
     private void getNewToken() throws IOException, InterruptedException {
-        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, authHeaders(), oBuilder.timeout);
+        final Map<String, String> headers = authHeaders();
+        final HttpRequest.Builder requestBuilder = HttpUtil.buildRequest(authURI, headers, oBuilder.timeout);
         String postStr = buildGetTokenPostData();
         requestBuilder.POST(ofString(postStr));
         try {
-            if(oBuilder.getLogTokenRequests()){
-                logTokenRequest(authURI.toString(),authHeaders(),postStr);
+            if (oBuilder.logTokenRequests) {
+                logTokenRequest(authURI.toString(), headers, postStr);
             }
-            try (final HttpClient client = oBuilder.createHttpClient(oBuilder.tokenServerHttpVersion, oBuilder.tokenServerProxySelector)) {
+            try (final HttpClient client = HttpSenderBuilder.createHttpClient(oBuilder.tokenServerHttpVersion, oBuilder.tokenServerProxySelector)) {
                 final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() < 200 || response.statusCode() >= 400) {
                     throw new IllegalStateException("Failed to get new token: " + response.body());
@@ -95,11 +67,11 @@ public class TokenManager {
     private static void logTokenRequest(String url, Map<String, String> headers, String postData) {
         StringBuilder sb = new StringBuilder("POST").append(System.lineSeparator());
         sb.append("'").append(url).append("'").append(System.lineSeparator());
-        for(Map.Entry<String,String> h : headers.entrySet()){
+        for (Map.Entry<String, String> h : headers.entrySet()) {
             sb.append("-H ").append("'").append(h.getKey()).append(":").append(" ").append(h.getValue()).append("'").append(System.lineSeparator());
         }
         sb.append("-d ").append("'").append(postData).append("'").append(System.lineSeparator());
-        Utils.logMessage("INFO",sb.toString());
+        Utils.logMessage("INFO", sb.toString());
     }
 
     private void parseResponse(String body) {
@@ -112,14 +84,13 @@ public class TokenManager {
         if (expiresIn == 0 && response.containsKey("expires")) {
             expiresIn = HttpUtil.toLong(response.get("expires"));
         }
-        String newRefreshToken = response.containsKey("refresh_token") ? (String) response.get("refresh_token") : null;
-        if (!HttpUtil.isEmpty(newRefreshToken)) {
-            this.refreshToken = newRefreshToken;
-        }
         tokenCreationTime = System.currentTimeMillis();
     }
 
     private void checkTokensExpiration() {
+        if (token == null) {
+            return;
+        }
         long now = System.currentTimeMillis();
         boolean valid = true;
         if (expiresIn > 0) {
@@ -151,28 +122,27 @@ public class TokenManager {
         token = null;
     }
 
-    private void invalidateRefreshToken() {
-        refreshToken = null;
-    }
-
     protected Map<String, String> authHeaders() {
         Map<String, String> h = new HashMap<>();
-        if(!HttpUtil.isEmpty(oBuilder.contentType)){
+        if (!HttpUtil.isEmpty(oBuilder.contentType)) {
             h.put("Content-Type", oBuilder.contentType);
         }
-        if(!HttpUtil.isEmpty(oBuilder.acceptedType)){
+        if (!HttpUtil.isEmpty(oBuilder.acceptedType)) {
             h.put("Accept", oBuilder.acceptedType);
         }
-        if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.BasicAuthHeader) {
+
+        if (!HttpUtil.isEmpty(oBuilder.customBasicAuthUsername) && !HttpUtil.isEmpty(oBuilder.customBasicAuthPassword)) {
+            h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.customBasicAuthUsername + ":" + oBuilder.customBasicAuthPassword));
+        } else if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.BasicAuthHeader) {
             h.put("Authorization", "Basic " + HttpUtil.encode(oBuilder.clientId + ":" + oBuilder.clientSecret));
         }
         return h;
     }
 
     protected String buildGetTokenPostData() {
-        String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_CONST, "client_credentials", "scope", oBuilder.scope);
+        String postStr = HttpUtil.buildPostString(OAuthHttpSender.GRANT_TYPE_KEY_NAME, OAuthHttpSender.GRANT_TYPE_VALUE, "scope", oBuilder.scope);
         if (oBuilder.clientAuthentication == OAuthHttpSender.ClientAuthentication.ClientCredentialsInBody) {
-            postStr += "&" + HttpUtil.buildPostString("client_id", oBuilder.clientId, "client_secret", oBuilder.clientSecret);
+            postStr += "&" + HttpUtil.buildPostString(oBuilder.clientIdKeyName, oBuilder.clientId, oBuilder.clientSecretKeyName, oBuilder.clientSecret);
         }
         return postStr;
     }
