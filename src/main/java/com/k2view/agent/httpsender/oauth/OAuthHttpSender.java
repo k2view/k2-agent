@@ -18,7 +18,8 @@ public class OAuthHttpSender implements HttpSender {
     public enum ClientAuthentication {BasicAuthHeader, ClientCredentialsInBody}
     static final Set<Integer> NEED_TO_RENEW_TOKEN_ERROR_CODES = Set.of(401);
 
-    static final String GRANT_TYPE_CONST = "grant_type";
+    public static final String GRANT_TYPE_KEY_NAME = "grant_type";
+    public static final String GRANT_TYPE_VALUE = "client_credentials";
 
     private final HttpClient httpClient;
 
@@ -36,12 +37,12 @@ public class OAuthHttpSender implements HttpSender {
     public HttpResponse<String> send(URI uri, String body, Map<String, String> headers) throws Exception {
         Map<String,String> h = new HashMap<>();
         if(headers != null){
-            headers.putAll(h);
+            h.putAll(headers);
         }
         final HttpRequest.BodyPublisher b = ofString(body);
         String token = tokenMgr.getToken();
         Map<String, String> postHeaders = addAuth(h, token);
-        final HttpRequest request = HttpUtil.buildRequest(uri, postHeaders, timeout)
+        HttpRequest request = HttpUtil.buildRequest(uri, postHeaders, timeout)
                 .POST(b)
                 .build();
 
@@ -50,7 +51,13 @@ public class OAuthHttpSender implements HttpSender {
         if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
             tokenMgr.invalidateToken();
 
-            // Send with the token
+            // The token was not valid. Get a new one and retry
+            token = tokenMgr.getToken();
+            postHeaders = addAuth(h, token);
+            request = HttpUtil.buildRequest(uri, postHeaders, timeout)
+                    .POST(b)
+                    .build();
+            // Send with the new token
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
                 tokenMgr.invalidateToken();
@@ -60,7 +67,7 @@ public class OAuthHttpSender implements HttpSender {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (httpClient != null) {
             httpClient.close();
         }
@@ -69,7 +76,7 @@ public class OAuthHttpSender implements HttpSender {
     /*
     https://datatracker.ietf.org/doc/html/rfc6750
      */
-    private Map<String, String> addAuth(Map<String, String> headers, String token) {
+    private static Map<String, String> addAuth(Map<String, String> headers, String token) {
         if (headers == null) {
             headers = new HashMap<>();
         }

@@ -1,96 +1,56 @@
 package com.k2view.agent.httpsender;
 
 import com.k2view.agent.Utils;
-import com.k2view.agent.httpsender.oauth.OAuthHttpSender;
-import com.k2view.agent.httpsender.oauth.OAuthRequestBuilder;
-import com.k2view.agent.httpsender.oauth.TokenManager;
-import com.k2view.agent.httpsender.simple.HttpSenderSimple;
+import com.k2view.agent.httpsender.oauth.OAuthHttpSenderBuilder;
+import com.k2view.agent.httpsender.simple.HttpSenderBuilder;
 
-import java.net.InetSocketAddress;
-import java.net.ProxySelector;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 import java.util.Map;
 
 public interface HttpSender extends AutoCloseable {
 
     HttpResponse<String> send(URI uri, String body, Map<String, String> headers) throws Exception;
-
+    
     static HttpSender get() {
-        String senderUrl = Utils.env("OAUTH_SERVER_URL");
-        if (senderUrl != null && !senderUrl.isEmpty()) {
+        String oauthServerUrl = Utils.env("OAUTH_SERVER_URL");
+
+        if (!HttpUtil.isEmpty(oauthServerUrl)) {
+            // Use Open auth server with grant_type: client_credentials
             String clientId = Utils.env("OAUTH_CLIENT_ID");
-            if (clientId == null || clientId.isEmpty()) {
-                throw new IllegalArgumentException("Client ID cannot be null or empty");
-            }
             String clientSecret = Utils.env("OAUTH_CLIENT_SECRET");
-            if (clientSecret == null || clientSecret.isEmpty()) {
-                throw new IllegalArgumentException("Client secret cannot be null or empty");
-            }
-
+            String clientIdParamName = Utils.env("OAUTH_CLIENT_ID_PARAM_NAME");
+            String clientSecretParamName = Utils.env("OAUTH_CLIENT_SECRET_PARAM_NAME");
             String scope = Utils.env("OAUTH_SCOPE");
-            if (scope == null || scope.isEmpty()) {
-                scope = "0";
-            }
+            String basicAuthUsername = Utils.env("OAUTH_BASIC_AUTH_USERID");
+            String basicAuthPassword = Utils.env("OAUTH_BASIC_AUTH_PASSWORD");
+            String acceptedType = Utils.env("OAUTH_ACCEPTED_TYPE");
+            String contentType = Utils.env("OAUTH_CONTENT_TYPE");
+            Boolean logAuthServerRequests = Boolean.parseBoolean(Utils.env("OAUTH_LOG_TOKEN_REQUESTS"));
+            String authServerHttpVersion = Utils.env("AUTH_SERVER_HTTP_VERSION");
+            String authServerProxyHost = Utils.env("AUTH_SERVER_PROXY_HOST");
+            String authServerProxyPort = Utils.env("AUTH_SERVER_PROXY_PORT");
 
-            String consumerKey = Utils.env("OAUTH_CONSUMER_KEY");
-            String consumerSecret = Utils.env("OAUTH_CONSUMER_SECRET");
+            var builder = new OAuthHttpSenderBuilder(oauthServerUrl);
 
-            var builder = new OAuthRequestBuilder(senderUrl);
-
-            if (!HttpUtil.isEmpty(consumerKey) && !HttpUtil.isEmpty(consumerSecret)) {
-                builder.addTokenRequestCustomHeaders("Authorization", "Basic " + HttpUtil.encode(consumerKey + ":" + consumerSecret));
-            }
-
-            return builder.clientId(clientId)
+            return builder
+                    .clientId(clientId)
+                    .clientIdKeyName(clientIdParamName)
                     .clientSecret(clientSecret)
-                    .timeout(60)
+                    .clientSecretKeyName(clientSecretParamName)
+                    .basicAuthCredentials(basicAuthUsername, basicAuthPassword)
                     .scope(scope)
-                    .buildSender();
+                    .acceptedType(acceptedType)
+                    .contentType(contentType)
+                    .authServerHttpVersion(HttpUtil.httpVersion(authServerHttpVersion))
+                    .authServerProxySelector(HttpUtil.httpProxy(authServerProxyHost, authServerProxyPort))
+                    .logTokenRequests(logAuthServerRequests)
+                    .httpVersion(HttpUtil.httpVersion(Utils.env("AGENT_HTTP_VERSION")))
+                    .proxySelector(HttpUtil.httpProxy(Utils.env("AGENT_PROXY_HOST"), Utils.env("AGENT_PROXY_PORT"))).buildSender();
         }
 
-        // Default to HTTP/2 if not specified
-        HttpClient.Version httpVersion = HttpClient.Version.HTTP_2;
-        String httpVersionEnv = Utils.env("HTTP_VERSION");
-
-        if (httpVersionEnv != null && !httpVersionEnv.isEmpty()) {
-            switch (httpVersionEnv) {
-                case "HTTP_1_1":
-                    httpVersion = HttpClient.Version.HTTP_1_1;
-                    break;
-                case "HTTP_2":
-                    httpVersion = HttpClient.Version.HTTP_2;
-                    break;
-                default:
-                    throw new IllegalArgumentException("Invalid HTTP version: " + httpVersionEnv);
-            }
-        }
-
-        // Http Client Builder
-        HttpClient.Builder httpClientBuilder = HttpClient.newBuilder().version(httpVersion);
-
-        // Porxy Capabilties Logic
-        String agentProxyUrl = Utils.env("AGENT_PROXY_HOST");
-        if(agentProxyUrl != null && !agentProxyUrl.isEmpty()){
-            
-            int proxyPort = 80; // by default set for http port
-            String agentProxyUrlPort = Utils.env("AGENT_PROXY_PORT");
-
-            if (agentProxyUrlPort != null && !agentProxyUrlPort.isEmpty()) {
-                try {
-                    proxyPort = Integer.parseInt(agentProxyUrlPort);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Invalid port number: " + agentProxyUrlPort, e);
-                }
-            }
-
-            httpClientBuilder.proxy(ProxySelector.of(new InetSocketAddress(agentProxyUrl, proxyPort)));
-        }
-
-        // Http Client
-        HttpClient httpClient = httpClientBuilder.build();
-
-        return new HttpSenderSimple(httpClient);
+        // Fallback to simple http client
+        return new HttpSenderBuilder().httpVersion(HttpUtil.httpVersion(Utils.env("AGENT_HTTP_VERSION")))
+                .proxySelector(HttpUtil.httpProxy(Utils.env("AGENT_PROXY_HOST"), Utils.env("AGENT_PROXY_PORT"))).buildSender();
     }
 }

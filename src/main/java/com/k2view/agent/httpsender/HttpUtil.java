@@ -3,12 +3,14 @@ package com.k2view.agent.httpsender;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -17,6 +19,7 @@ import static java.lang.Thread.currentThread;
 public class HttpUtil {
 
     private static final Gson gson = new GsonBuilder().create();
+    private static String DEFAULT_CONTENT_TYPE = "application/json";
 
     public static <T> T rte(WrapFunction<T> wrap) {
         try {
@@ -27,16 +30,6 @@ public class HttpUtil {
         }
     }
 
-    public static Map<String,String> merge(Map<String,String>... maps){
-        Map<String,String> merged = new HashMap<>();
-        for(Map<String,String> m : maps){
-            if(m != null){
-                merged.putAll(m);
-            }
-        }
-        return merged;
-    }
-
     public static void rte(WrapProcedure wrap) {
         try {
             wrap.f();
@@ -44,6 +37,40 @@ public class HttpUtil {
             checkInterrupt(e);
             throw wrapCause(RuntimeException::new, e);
         }
+    }
+
+    /**
+     * Return http proxy
+     * @param proxyUrl
+     * @param proxyUrlPort
+     * @return
+     */
+    public static ProxySelector httpProxy(String proxyUrl, String proxyUrlPort) {
+        // Proxy Capabilities Logic
+        if (!HttpUtil.isEmpty(proxyUrl)) {
+            int proxyPort = 80;
+            if (!HttpUtil.isEmpty(proxyUrlPort)) {
+                try {
+                    proxyPort = Integer.parseInt(proxyUrlPort);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Invalid port number: " + proxyUrlPort, e);
+                }
+            }
+            return ProxySelector.of(new InetSocketAddress(proxyUrl, proxyPort));
+        }
+        return null;
+    }
+
+    /**
+     * Return http version
+     * @param httpVersionEnv - Accepted values:  HTTP_1_1, HTTP_2
+     * @return
+     */
+    public static HttpClient.Version httpVersion(String httpVersionEnv) {
+        if (!HttpUtil.isEmpty(httpVersionEnv)) {
+            return HttpClient.Version.valueOf(httpVersionEnv);
+        }
+        return HttpClient.Version.HTTP_2;
     }
 
     @FunctionalInterface
@@ -77,8 +104,6 @@ public class HttpUtil {
         return val == null ? def : val;
     }
 
-    private static String CONTENT_TYPE = "application/json";
-
     public static HttpRequest.Builder buildRequest(URI uri, Map<String, String> headers, int timeout) {
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(uri)
@@ -90,9 +115,9 @@ public class HttpUtil {
             }
         }
 
-        // Add content type
+        // Add default content type
         if (headers == null || !headers.containsKey("Content-Type")) {
-            requestBuilder.header("Content-Type", CONTENT_TYPE);
+            requestBuilder.header("Content-Type", DEFAULT_CONTENT_TYPE);
         }
 
         return requestBuilder;
