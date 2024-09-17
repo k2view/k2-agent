@@ -14,7 +14,7 @@ FROM amazonlinux:latest
 
 # Install required packages
 RUN yum update -y && \
-    yum install -y --allowerasing glibc glibc-devel libstdc++ curl ca-certificates
+    yum install -y --allowerasing glibc glibc-devel libstdc++ curl ca-certificates procps-ng
 
 # Copy the compiled binary from the build stage
 COPY --from=build /app/target/K2v-Agent /usr/local/bin/
