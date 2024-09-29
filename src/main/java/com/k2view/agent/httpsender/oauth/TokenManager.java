@@ -48,11 +48,15 @@ public class TokenManager {
         String postStr = buildGetTokenPostData();
         requestBuilder.POST(ofString(postStr));
         try {
-            if (oBuilder.logTokenRequests) {
-                logTokenRequest(authURI.toString(), headers, postStr);
+            HttpRequest req = requestBuilder.build();
+            if (oBuilder.debug) {
+                HttpUtil.logHttpRequest(req, postStr);
             }
             try (final HttpClient client = HttpSenderBuilder.createHttpClient(oBuilder.tokenServerHttpVersion, oBuilder.tokenServerProxySelector)) {
-                final HttpResponse<String> response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+                final HttpResponse<String> response = client.send(req, HttpResponse.BodyHandlers.ofString());
+                if (oBuilder.debug) {
+                    HttpUtil.logHttpResponse(response);
+                }
                 if (response.statusCode() < 200 || response.statusCode() >= 400) {
                     throw new IllegalStateException("Failed to get new token: " + response.body());
                 }
@@ -64,15 +68,6 @@ public class TokenManager {
         }
     }
 
-    private static void logTokenRequest(String url, Map<String, String> headers, String postData) {
-        StringBuilder sb = new StringBuilder("POST").append(System.lineSeparator());
-        sb.append("'").append(url).append("'").append(System.lineSeparator());
-        for (Map.Entry<String, String> h : headers.entrySet()) {
-            sb.append("-H ").append("'").append(h.getKey()).append(":").append(" ").append(h.getValue()).append("'").append(System.lineSeparator());
-        }
-        sb.append("-d ").append("'").append(postData).append("'").append(System.lineSeparator());
-        Utils.logMessage("INFO", sb.toString());
-    }
 
     private void parseResponse(String body) {
         final Map<String, Object> response = HttpUtil.jsonToMap(body);

@@ -1,5 +1,6 @@
 package com.k2view.agent.httpsender.oauth;
 
+import com.k2view.agent.Utils;
 import com.k2view.agent.httpsender.HttpSender;
 import com.k2view.agent.httpsender.HttpUtil;
 
@@ -46,8 +47,15 @@ public class OAuthHttpSender implements HttpSender {
                 .POST(b)
                 .build();
 
+        if(tokenMgr.oBuilder.debug) {
+            HttpUtil.logHttpRequest(request,body);
+        }
+
         // Send with the token
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if(tokenMgr.oBuilder.debug) {
+            HttpUtil.logHttpResponse(response);
+        }
         if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
             tokenMgr.invalidateToken();
 
@@ -58,7 +66,13 @@ public class OAuthHttpSender implements HttpSender {
                     .POST(b)
                     .build();
             // Send with the new token
+            if(tokenMgr.oBuilder.debug) {
+                HttpUtil.logHttpRequest(request,body);
+            }
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if(tokenMgr.oBuilder.debug) {
+                HttpUtil.logHttpResponse(response);
+            }
             if (NEED_TO_RENEW_TOKEN_ERROR_CODES.contains(response.statusCode())) {
                 tokenMgr.invalidateToken();
             }

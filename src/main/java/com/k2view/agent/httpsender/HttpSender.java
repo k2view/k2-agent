@@ -26,7 +26,7 @@ public interface HttpSender extends AutoCloseable {
             String basicAuthPassword = Utils.env("OAUTH_BASIC_AUTH_PASSWORD");
             String acceptedType = Utils.env("OAUTH_ACCEPTED_TYPE");
             String contentType = Utils.env("OAUTH_CONTENT_TYPE");
-            Boolean logAuthServerRequests = Boolean.parseBoolean(Utils.env("OAUTH_LOG_TOKEN_REQUESTS"));
+            Boolean debug = Boolean.parseBoolean(Utils.env("DEBUG"));
             String authServerHttpVersion = Utils.env("AUTH_SERVER_HTTP_VERSION");
             String authServerProxyHost = Utils.env("AUTH_SERVER_PROXY_HOST");
             String authServerProxyPort = Utils.env("AUTH_SERVER_PROXY_PORT");
@@ -44,7 +44,7 @@ public interface HttpSender extends AutoCloseable {
                     .contentType(contentType)
                     .authServerHttpVersion(HttpUtil.httpVersion(authServerHttpVersion))
                     .authServerProxySelector(HttpUtil.httpProxy(authServerProxyHost, authServerProxyPort))
-                    .logTokenRequests(logAuthServerRequests)
+                    .debug(debug)
                     .httpVersion(HttpUtil.httpVersion(Utils.env("AGENT_HTTP_VERSION")))
                     .proxySelector(HttpUtil.httpProxy(Utils.env("AGENT_PROXY_HOST"), Utils.env("AGENT_PROXY_PORT"))).buildSender();
         }

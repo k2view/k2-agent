@@ -2,6 +2,7 @@ package com.k2view.agent.httpsender;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.k2view.agent.Utils;
 
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
@@ -9,8 +10,10 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -37,6 +40,25 @@ public class HttpUtil {
             checkInterrupt(e);
             throw wrapCause(RuntimeException::new, e);
         }
+
+    }
+
+    public static void logHttpRequest(HttpRequest request,String payload){
+        StringBuilder sb = new StringBuilder(request.method().toUpperCase()).append(System.lineSeparator());
+        sb.append("'").append(request.uri()).append("'").append(System.lineSeparator());
+        for (Map.Entry<String, List<String>> h : request.headers().map().entrySet()) {
+            sb.append("-H ").append("'").append(h.getKey()).append(":").append(" ").append(h.getValue()).append("'").append(System.lineSeparator());
+        }
+        if(!HttpUtil.isEmpty(payload)) {
+            sb.append("-d ").append("'").append(payload).append("'").append(System.lineSeparator());
+        }
+        Utils.logMessage("DEBUG", sb.toString());
+    }
+
+    public static void logHttpResponse(HttpResponse<String> response) {
+        StringBuilder sb = new StringBuilder(response.toString()).append(System.lineSeparator());
+        sb.append(response.body());
+        Utils.logMessage("DEBUG",sb.toString());
     }
 
     /**

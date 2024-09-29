@@ -26,7 +26,7 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
     String acceptedType = "application/json";
     HttpClient.Version tokenServerHttpVersion;
     ProxySelector tokenServerProxySelector;
-    boolean logTokenRequests = false;
+    boolean debug = false;
 
     public OAuthHttpSenderBuilder(String authServerUrl) {
         this.authServerUrl = authServerUrl;
@@ -37,8 +37,8 @@ public class OAuthHttpSenderBuilder extends HttpSenderBuilder {
         return new OAuthHttpSender(createHttpClient(), new TokenManager(this), timeout);
     }
 
-    public OAuthHttpSenderBuilder logTokenRequests(boolean logRequests) {
-        this.logTokenRequests = logRequests;
+    public OAuthHttpSenderBuilder debug(boolean y) {
+        this.debug = y;
         return this;
     }
 
