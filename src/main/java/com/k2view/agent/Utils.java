@@ -27,7 +27,12 @@ public class Utils {
      * Build a dyamicString based on the env() function
      */
     public static String dynamicString(String s) {
-        return dynamicString(s, r -> def(env(r), ""));
+        return dynamicString(s, r -> {
+            // Retrieve the environment variable or system property
+            String replacement = env(r);
+            // If the variable is null or empty, return the original ${r} expression
+            return (replacement == null || replacement.isEmpty()) ? "${" + r + "}" : replacement;
+        });
     }
     /**
      * Get an environment variable from the Property (-D) and if not exists, from the environment
@@ -71,7 +76,14 @@ public class Utils {
 
                         // We remove the first { , use the lambda to get the value and reset the variable
                         String v = variable.substring(1);
-                        result.append(replaceWith.apply(v));
+                        String replacement = replaceWith.apply(v);
+
+                        // If there's no replacement, keep the ${variable} as is
+                        if (replacement == null || replacement.isEmpty()) {
+                            result.append("${").append(v).append("}");
+                        } else {
+                            result.append(replacement);
+                        }
                         variable.setLength(0);
                         continue;
                     }
