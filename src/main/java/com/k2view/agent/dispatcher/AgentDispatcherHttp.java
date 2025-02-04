@@ -2,7 +2,9 @@ package com.k2view.agent.dispatcher;
 
 import com.k2view.agent.Request;
 import com.k2view.agent.Response;
+import com.k2view.agent.PrometheusMetrics;
 
+import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
@@ -14,7 +16,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +52,11 @@ public class AgentDispatcherHttp implements AgentDispatcher {
      */
     private final HttpClient httpClient;
 
+    /**
+     * A `PrometheusMetrics` to publish relevant metrics
+     */
+    private final PrometheusMetrics metrics;
+
 
     /**
      * Creates a new `AgentSender` instance with a specified maximum queue size.
@@ -61,6 +67,7 @@ public class AgentDispatcherHttp implements AgentDispatcher {
         outgoing = new LinkedBlockingQueue<>(maxQueueSize);
         requestExecutor = Executors.newCachedThreadPool(r -> new Thread(r, "AgentSender-RequestExecutor"));
         httpClient = initHttpClient();
+        this.metrics = PrometheusMetrics.getInstance(); // Get Prometheus instance
     }
 
     private HttpClient initHttpClient() {
@@ -83,8 +90,22 @@ public class AgentDispatcherHttp implements AgentDispatcher {
         try {
             logMessage("INFO", String.format("Sending mail[taskId:%s, url:%s, method:%s]",
                     request.taskId(), request.url(), request.method()));
+            if (metrics != null) {
+                metrics.requestCounter.inc();  // Track total requests
+                metrics.activeRequests.inc();  // Track active requests
+            }
+            long startTime = System.nanoTime(); // Start measuring response time
+
             httpClient.sendAsync(getHttpRequest(request), ofString())
-                    .thenAccept(r -> sendResponse(request, r))
+                    .thenAccept(r -> {
+                        long duration = System.nanoTime() - startTime; // Measure response time
+
+                        if (metrics != null) {
+                            metrics.responseTime.observe(duration / 1e9); // 🔹 Track response time
+                            metrics.activeRequests.dec(); // 🔹 Decrement active requests
+                        }
+                        sendResponse(request, r);
+                    })
                     .exceptionally(e -> {
                         handleFailedRequest(request, e);
                         return null;
@@ -118,6 +139,10 @@ public class AgentDispatcherHttp implements AgentDispatcher {
     private void handleFailedRequest(Request request, Throwable throwable) {
         logMessage("ERROR", String.format("Failed to send mail[taskId:%s, url:%s, method:%s], error: %s",
                 request.taskId(), request.url(), request.method(), "Failed to send mail after 3 tries"));
+        if (metrics != null) {
+            metrics.failedRequestCounter.labels(request.taskId()).inc(); // Track failed requests
+            metrics.activeRequests.dec(); // Decrement active requests on failure
+        }
         sendErrorResponse(request, throwable);
     }
 
