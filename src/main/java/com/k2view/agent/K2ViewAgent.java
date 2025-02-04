@@ -21,6 +21,7 @@ import static java.lang.Integer.parseInt;
 public class K2ViewAgent {
 
     private static final int MAX_RETRY = 3;
+    private final PrometheusMetrics metrics;
 
     /**
      * The polling interval in seconds for checking the inbox for new messages.
@@ -45,10 +46,19 @@ public class K2ViewAgent {
      */
     private final AtomicBoolean running = new AtomicBoolean(true);
 
+    // private HTTPServer metricsServer;
+
     public K2ViewAgent(Postman postman, int pollingInterval, AgentDispatcher agentSender) {
         this.postman = postman;
         this.dispatcher = agentSender;
         this.pollingInterval = pollingInterval;
+        this.metrics = PrometheusMetrics.getInstance(); // Initialize Prometheus
+        if (metrics != null) {
+            logMessage("INFO", "Prometheus metrics enabled.");
+        } else {
+            logMessage("INFO", "Prometheus metrics disabled.");            
+        }
+  
     }
 
 
@@ -75,6 +85,11 @@ public class K2ViewAgent {
             List<Request> retryList = new ArrayList<>();
             long interval;
             while (running.get()) {
+                // Simulate processing a request
+                // requests.inc(); // Increment the counter for each request
+                long startTime = System.nanoTime(); // Start timing
+                metrics.requestCounter.inc(); // Increment total requests
+                metrics.activeRequests.inc(); // Increment active request count
                 Requests inboxMessages = postman.getInboxMessages(responseList);
                 cleanInProcess(responseList);
                 interval = inboxMessages.pollInterval() > 0 ? inboxMessages.pollInterval() : pollingInterval;
@@ -86,6 +101,10 @@ public class K2ViewAgent {
                 var filteredResponse = filterResponses(list);
                 responseList = filteredResponse.returnToSender;
                 retryList = filteredResponse.retry;
+
+                long duration = System.nanoTime() - startTime; // Measure duration
+                metrics.responseTime.observe(duration / 1e9); // Log processing time
+                metrics.activeRequests.dec(); // Decrement active requests
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -155,6 +174,9 @@ public class K2ViewAgent {
      * Stops the agent by setting the `running` flag to `false`.
      */
     public void stop() {
+        if (metrics != null) {
+            metrics.stop();
+        }
         Utils.logMessage("INFO", "Stopping agent");
         running.set(false);
     }
