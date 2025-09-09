@@ -1,5 +1,5 @@
 # Use Ubuntu as the base image
-FROM vegardit/graalvm-maven:latest-java21 as build
+FROM vegardit/graalvm-maven:latest-java21 AS build
 
 # Set the working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ RUN yum update -y && \
     yum clean all
 
 # Create application user and directories
-RUN mkdir -p /opt/apps && groupadd -g 1000 k2view && useradd -m -d /opt/apps/k2view-agent -s /bin/bash -g k2view k2view-agent
+RUN mkdir -p /opt/apps && groupadd -g 1000 k2view && useradd -u 1000 -m -d /opt/apps/k2view-agent -s /bin/bash -g k2view k2view-agent
 WORKDIR /opt/apps/k2view-agent
 
 # Copy the compiled binary from the build stage
