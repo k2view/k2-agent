@@ -1,6 +1,0 @@
-apiVersion: v2
-name: k2view-agent
-description: A Helm chart for K2view cloud manager site agent
-type: application
-version: 1.1.2
-appVersion: "1.17.0"
