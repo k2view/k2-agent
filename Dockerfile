@@ -26,7 +26,7 @@ WORKDIR /opt/apps/k2view-agent
 COPY --from=build /app/target/K2v-Agent /opt/apps/k2view-agent
 # Create a symlink to the binary for backward compatibility
 RUN ln -s /opt/apps/k2view-agent/K2v-Agent /usr/local/bin/k2view-agent
-RUN chown -R k2view-agent:k2view /opt/apps/k2view-agent
+RUN chown -R k2view-agent:k2view /opt/apps/k2view-agent /usr/local/bin/k2view-agent
 
 # Set the user to the application user
 USER k2view-agent
