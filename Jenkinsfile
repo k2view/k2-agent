@@ -6,7 +6,7 @@ pipeline {
     parameters {
         // Image
         string(name: 'imageName', description: 'Image name to be set', defaultValue: 'k2view/k2v-agent')
-        string(name: 'version', description: 'Image version to be set', defaultValue: '1.0')
+        string(name: 'version', description: 'Image version to be set', defaultValue: '3.0')
         // Docker
         booleanParam(name: 'update_image_latest', description: 'Select it if you want to update the image the latest version on local docker.', defaultValue: false)
         booleanParam(name: 'remove_image', description: 'Select it if you want to remove the image from local docker.', defaultValue: false)
