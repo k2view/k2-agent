@@ -87,7 +87,7 @@ spec:
         - name: k2view-agent
           image: {{ $image.url }}
           imagePullPolicy: {{ $image.pullPolicy | default "IfNotPresent" }}
-          command: [ "/usr/local/bin/K2v-Agent" ]
+          command: [ "K2v-Agent" ]
           args:
             {{- if $customCACerts }}
             - "-Djavax.net.ssl.trustStore=/etc/pki/ca-trust/extracted/java/cacerts"
