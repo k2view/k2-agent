@@ -1,19 +1,19 @@
 # k2view-agent
 
-![Version: 1.1.17](https://img.shields.io/badge/Version-1.1.17-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.11](https://img.shields.io/badge/AppVersion-2.11-informational?style=flat-square)
+![Version: 1.1.18](https://img.shields.io/badge/Version-1.1.18-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 2.11](https://img.shields.io/badge/AppVersion-2.11-informational?style=flat-square)
 
-This Helm chart simplifies the deployment of the K2view cloud orchestrator site agent, ensuring a streamlined integration with your cloud infrastructure.
+This Helm chart simplifies the deployment of the K2cloud Orchestrator site agent, ensuring a streamlined integration with your cloud infrastructure.
 
 ## Prerequisites
 Before installing the K2view agent, ensure you have the following:
 
 * **Helm 3.x** - [Install Helm](https://helm.sh/docs/intro/install/)
 * **Kubernetes cluster** - Access to a running Kubernetes cluster (v1.19+)
-* **MAILBOX ID** - Unique identifier provided by K2view to associate your site with K2view cloud orchestrator
+* **MAILBOX ID** - Unique identifier provided by K2view to associate your site with K2cloud Orchestrator
 * **Cloud provider credentials** - Appropriate IAM roles or service accounts configured for your cloud provider (AWS/GCP/Azure)
 * **Network access** - The agent pod must be able to reach:
   - Kubernetes API server
-  - K2view cloud orchestrator (`https://cloud.k2view.com`)
+  - K2cloud Orchestrator (`https://cloud.k2view.com`)
   - Your cloud provider APIs
 
 ## Values
@@ -36,8 +36,8 @@ Below is a table detailing the various configurable parameters for the K2view ag
 | container.affinity.label.name | string | `"topology.kubernetes.io/zone"` | Node label name for affinity rules. |
 | container.affinity.label.value | string | `"region-a"` | Node label value for affinity rules. |
 | secrets | object |  | Configuration secrets for K2view agent. |
-| secrets.K2_MAILBOX_ID | string | `""` | Unique identifier provided by K2view to associate your site with K2view cloud orchestrator. |
-| secrets.K2_MANAGER_URL | string | `"https://cloud.k2view.com/api/mailbox"` | K2view cloud orchestrator url. |
+| secrets.K2_MAILBOX_ID | string | `""` | Unique identifier provided by K2view to associate your site with K2cloud Orchestrator. |
+| secrets.K2_MANAGER_URL | string | `"https://cloud.k2view.com/api/mailbox"` | K2cloud Orchestrator url. |
 | secrets.kubeInterface | string | `"https://kubernetes.default.svc"` | Kubernetes API interface, need to be accessible from the agent. |
 | secrets.CLOUD | string | `""` | Cloud provider (GCP\|AWS\|AZURE). |
 | secrets.REGION | string | `""` | Cloud region. |
