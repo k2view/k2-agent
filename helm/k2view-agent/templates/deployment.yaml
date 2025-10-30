@@ -38,26 +38,26 @@ spec:
       serviceAccountName: {{ $serviceAccount.name }}
       {{- end }}
       {{- if or (eq $affinity.type "affinity") (eq $affinity.type "anti-affinity") }}
-        affinity:
-          {{- if eq $affinity.type "affinity" }}
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: {{ $affinity.label.name }}
-                  operator: In
-                  values:
-                  - {{ $affinity.label.value }}
-          {{- else if eq $affinity.type "anti-affinity" }}
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: {{ $affinity.label.name }}
-                  operator: NotIn
-                  values:
-                  - {{ $affinity.label.value }}
-          {{- end }}
+      affinity:
+        {{- if eq $affinity.type "affinity" }}
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ $affinity.label.name }}
+                operator: In
+                values:
+                - {{ $affinity.label.value }}
+        {{- else if eq $affinity.type "anti-affinity" }}
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: {{ $affinity.label.name }}
+                operator: NotIn
+                values:
+                - {{ $affinity.label.value }}
+        {{- end }}
       {{- end }}
       {{- if $container.securityContext | default false }}
       securityContext:
