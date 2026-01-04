@@ -136,7 +136,7 @@ helm install k2view-agent --set secrets.K2_MAILBOX_ID="MY-MAILBOX-ID" .
 ### Install from helm repo
 1. Add repo
 ```bash
-helm repo add k2view-agent https://nexus.share.cloud.k2view.com/repository/k2view-agent
+helm repo add k2view-agent https://helm.share.cloud.k2view.com/k2view-agent
 ```
 
 2. Install

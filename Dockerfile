@@ -12,6 +12,13 @@ RUN mvn package -Pnative -DskipTests
 ## Run Time Image
 FROM amazonlinux:latest
 
+# ---- OCI signature metadata ----
+ARG SIGNATURE_PUBLIC_KEY
+ARG SIGNATURE_BUNDLE_URL
+
+LABEL org.opencontainers.image.signature.key="${SIGNATURE_PUBLIC_KEY}"
+LABEL org.opencontainers.image.signature.bundle="${SIGNATURE_BUNDLE_URL}"
+
 # Install required packages
 RUN yum update -y && \
     yum install -y --allowerasing glibc glibc-devel libstdc++ curl ca-certificates procps-ng shadow-utils && \
