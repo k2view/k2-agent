@@ -21,8 +21,8 @@ LABEL org.opencontainers.image.signature.bundle="${SIGNATURE_BUNDLE_URL}"
 
 # Install required packages
 RUN yum update -y && \
-    yum install -y --allowerasing glibc glibc-devel libstdc++ curl ca-certificates procps-ng shadow-utils && \
-    yum upgrade -y && \
+    yum install -y --allowerasing glibc libstdc++ curl ca-certificates procps-ng shadow-utils && \
+    yum upgrade -y --releasever=latest && \
     yum clean all
 
 # Create application user and directories
