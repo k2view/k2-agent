@@ -10,7 +10,8 @@ COPY src/ /app/src/
 RUN mvn package -Pnative -DskipTests
 
 ## Run Time Image
-FROM amazonlinux:latest
+# Use specific version of Amazon Linux for reproducible builds
+FROM amazonlinux:2023
 
 # ---- OCI signature metadata ----
 ARG SIGNATURE_PUBLIC_KEY
@@ -20,10 +21,12 @@ LABEL org.opencontainers.image.signature.key="${SIGNATURE_PUBLIC_KEY}"
 LABEL org.opencontainers.image.signature.bundle="${SIGNATURE_BUNDLE_URL}"
 
 # Install required packages
+# procps-ng is required for "ps aux | grep K2v-Agent | grep -v grep" (liveness probe)
+# shadow-utils is required for useradd and groupadd, curl for debugging, ca-certificates for SSL certificate validation
 RUN yum update -y && \
-    yum install -y --allowerasing glibc libstdc++ curl ca-certificates procps-ng shadow-utils && \
+    yum install -y --allowerasing ca-certificates shadow-utils procps-ng curl && \
     yum upgrade -y --releasever=latest && \
-    yum clean all
+    yum clean all && rm -rf /var/cache/yum
 
 # Create application user and directories
 RUN mkdir -p /opt/apps && groupadd -g 1000 k2view && useradd -u 1000 -m -d /opt/apps/k2view-agent -s /bin/bash -g k2view k2view-agent
