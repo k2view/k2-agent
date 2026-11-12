@@ -25,16 +25,17 @@ RUN microdnf upgrade -y --releasever=latest && \
     microdnf clean all
 
 # Create application user and directories
-RUN mkdir -p /opt/apps && groupadd -g 1000 k2view && useradd -u 1000 -m -d /opt/apps/k2view-agent -s /bin/bash -g k2view k2view-agent
+RUN mkdir -p /opt/apps && groupadd -g 1000 k2view && useradd -u 1000 -m -d /opt/apps/k2view-agent -s /bin/bash -g k2view k2view-agent && chgrp 0 /opt/apps/k2view-agent && chmod 0770 /opt/apps/k2view-agent
 WORKDIR /opt/apps/k2view-agent
+ENV HOME=/opt/apps/k2view-agent
 
 # Copy the compiled binary from the build stage
-COPY --from=build --chown=k2view-agent:k2view /app/target/K2v-Agent /opt/apps/k2view-agent
+COPY --from=build --chown=1000:0 --chmod=511 /app/target/K2v-Agent /opt/apps/k2view-agent
 # Create a symlink to the binary for backward compatibility
 RUN ln -s /opt/apps/k2view-agent/K2v-Agent /usr/local/bin/K2v-Agent
 
 # Set the user to the application user
-USER k2view-agent
+USER 1000
 
 # Set the entry point for the application
 CMD ["/opt/apps/k2view-agent/K2v-Agent"]
